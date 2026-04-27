@@ -71,6 +71,23 @@ h1, h2, h3, h4, h5, h6 {
   animation: fadeIn 0.8s ease-out forwards;
 }
 
+/* Spinning animation for processing steps */
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+/* Drag-over highlight for file upload */
+.drop-zone.drag-over {
+  border-color: var(--accent);
+  background-color: rgba(197, 139, 69, 0.05);
+  color: var(--accent);
+}
+
 /* Base button styling */
 button {
   font-family: 'Inter', sans-serif;

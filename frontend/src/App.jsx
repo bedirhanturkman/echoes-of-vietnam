@@ -1,4 +1,4 @@
-// C:/Users/bdrhn/OneDrive/Masaüstü/UI/echoes-of-vietnam/src/App.jsx
+// src/App.jsx
 import React, { useCallback, useEffect, useState } from "react";
 import IntroSection from "./components/IntroSection";
 import UploadSection from "./components/UploadSection";
@@ -9,6 +9,8 @@ import "./App.css";
 
 function App() {
   const [appState, setAppState] = useState("intro"); // intro, upload, processing, result
+  const [taskId, setTaskId] = useState(null);
+  const [pipelineResult, setPipelineResult] = useState(null);
 
   useEffect(() => {
     const sectionIdByState = {
@@ -33,11 +35,13 @@ function App() {
     setAppState("upload");
   }, []);
 
-  const handleSampleSelect = useCallback(() => {
+  const handlePipelineStart = useCallback((newTaskId) => {
+    setTaskId(newTaskId);
     setAppState("processing");
   }, []);
 
-  const handleProcessingComplete = useCallback(() => {
+  const handleProcessingComplete = useCallback((result) => {
+    setPipelineResult(result);
     setAppState((currentState) =>
       currentState === "result" ? currentState : "result"
     );
@@ -50,16 +54,16 @@ function App() {
       {(appState === "upload" ||
         appState === "processing" ||
         appState === "result") && (
-        <UploadSection onSampleSelect={handleSampleSelect} />
+        <UploadSection onPipelineStart={handlePipelineStart} />
       )}
 
-      {appState === "processing" && (
-        <ProcessingSection onComplete={handleProcessingComplete} />
+      {appState === "processing" && taskId && (
+        <ProcessingSection taskId={taskId} onComplete={handleProcessingComplete} />
       )}
 
-      {appState === "result" && (
+      {appState === "result" && pipelineResult && (
         <>
-          <ResultSection />
+          <ResultSection result={pipelineResult} />
           <AboutSection />
         </>
       )}

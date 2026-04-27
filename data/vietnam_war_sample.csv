@@ -1,0 +1,31 @@
+date,title,location,category,sentiment,casualties
+1964-08-02,Gulf of Tonkin Incident,Gulf of Tonkin,conflict,-0.8,0
+1965-03-08,First US Combat Troops Arrive,Da Nang,military_offensive,-0.5,0
+1965-11-14,Battle of Ia Drang Valley,Central Highlands,conflict,-0.9,500
+1966-04-12,B-52 Bombers Strike North Vietnam,Mu Gia Pass,conflict,-0.7,0
+1967-01-08,Operation Cedar Falls Begins,Iron Triangle,military_offensive,-0.6,720
+1967-10-21,March on the Pentagon (Anti-war Protest),Washington D.C.,political_transition,0.3,0
+1968-01-30,Tet Offensive Begins,Saigon/Nationwide,conflict,-0.9,4000
+1968-02-24,Recapture of Hue City,Hue,conflict,-0.8,5000
+1968-03-16,My Lai Massacre,Son My Village,civilian_displacement,-1.0,504
+1968-05-10,First Paris Peace Talks Begin,Paris,peace_talks,0.5,0
+1968-10-31,Operation Rolling Thunder Ends,North Vietnam,peace_talks,0.4,0
+1969-06-08,Nixon Announces First Troop Withdrawals,Midway Island,political_transition,0.6,0
+1969-07-25,Nixon Doctrine Announced,Guam,political_transition,0.2,0
+1969-11-15,Massive Anti-war Demonstrations in US,Washington D.C.,political_transition,0.4,0
+1970-04-30,US and ARVN Forces Enter Cambodia,Cambodian Border,military_offensive,-0.7,800
+1970-05-04,Kent State Shootings,Ohio,conflict,-0.9,4
+1971-02-08,Operation Lam Son 719,Laos,military_offensive,-0.8,1500
+1971-06-13,Pentagon Papers Published,New York,political_transition,0.1,0
+1972-03-30,Easter Offensive Begins,Quang Tri,conflict,-0.9,3000
+1972-08-11,Last US Ground Combat Unit Departs,Da Nang,political_transition,0.7,0
+1972-12-18,Operation Linebacker II (Christmas Bombings),Hanoi/Haiphong,conflict,-0.9,1600
+1973-01-27,Paris Peace Accords Signed,Paris,peace_talks,0.9,0
+1973-03-29,Last US Troops Leave Vietnam,Saigon,political_transition,0.8,0
+1973-08-15,US Bombing of Cambodia Halts,Cambodia,peace_talks,0.6,0
+1974-08-09,Nixon Resigns Presidency,Washington D.C.,political_transition,0.2,0
+1975-01-01,Khmer Rouge Offensive Begins,Phnom Penh,conflict,-0.9,2000
+1975-03-10,North Vietnamese Spring Offensive,Central Highlands,military_offensive,-0.8,4000
+1975-04-29,Operation Frequent Wind (Evacuation),Saigon,civilian_displacement,-0.6,0
+1975-04-30,Fall of Saigon,Saigon,political_transition,-0.4,0
+1975-05-01,End of the Vietnam War,Nationwide,peace_talks,0.8,0

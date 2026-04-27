@@ -1,9 +1,22 @@
 import React from 'react';
 
-export default function InterpretationPanel() {
+export default function InterpretationPanel({ text, selectedEvent }) {
+  const globalText = text ||
+    "\u201CBu kompozisyon Vietnam Savaşı'na ait verilerden üretilmiştir. Haritadaki noktalar notalara, acılar ve barışlar melodinin ritmine dönüşüyor.\u201D";
+
   return (
     <div className="interpretation-panel">
-      “This composition is generated from clustered Vietnam War records. Conflict-heavy clusters produce darker tones and heavier durations, while peace-related clusters move toward softer and more stable harmonic structures. The interface does not present data as numbers only; it turns historical fragments into something the listener can feel.”
+      <div className="global-interpretation">
+        <h3>Musical Interpretation</h3>
+        <p>&ldquo;{globalText}&rdquo;</p>
+      </div>
+
+      {selectedEvent && (
+        <div className="event-interpretation" style={{ marginTop: '20px', padding: '15px', background: 'rgba(255,255,255,0.05)', borderRadius: '8px', borderLeft: '3px solid #ff4d4d' }}>
+          <h4 style={{ margin: '0 0 10px 0', color: '#ff4d4d' }}>{selectedEvent.title} ({selectedEvent.date})</h4>
+          <p style={{ fontStyle: 'italic', margin: 0 }}>&ldquo;{selectedEvent.musicalInterpretation}&rdquo;</p>
+        </div>
+      )}
     </div>
   );
 }
