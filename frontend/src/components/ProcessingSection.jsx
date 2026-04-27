@@ -1,84 +1,96 @@
 import React, { useEffect, useRef, useState } from "react";
-import { CheckCircle2, Circle } from "lucide-react";
+import { CheckCircle2, Circle, Loader2 } from "lucide-react";
 
-const PIPELINE_STEPS = [
-  "Reading historical fragments...",
-  "Creating semantic embeddings...",
-  "Mapping memories into coordinates...",
-  "Translating data into notes...",
-  "Generating the final soundscape...",
-];
+const API_BASE = "/api/v1/pipeline";
+const POLL_INTERVAL_MS = 800;
 
-const STEP_DURATION_MS = 900;
-const FALLBACK_TIMEOUT_MS = 7000;
-
-export default function ProcessingSection({ onComplete }) {
+export default function ProcessingSection({ taskId, onComplete }) {
+  const [steps, setSteps] = useState([]);
   const [currentStep, setCurrentStep] = useState(0);
+  const [progressPct, setProgressPct] = useState(0);
   const hasCompletedRef = useRef(false);
-  const timerRefs = useRef([]);
+  const pollRef = useRef(null);
 
   useEffect(() => {
+    if (!taskId) return;
     hasCompletedRef.current = false;
 
-    const clearTimers = () => {
-      timerRefs.current.forEach((timerId) => window.clearTimeout(timerId));
-      timerRefs.current = [];
+    const pollStatus = async () => {
+      try {
+        const statusRes = await fetch(`${API_BASE}/status/${taskId}`);
+        if (!statusRes.ok) return;
+
+        const statusData = await statusRes.json();
+        setSteps(statusData.steps || []);
+        setCurrentStep(statusData.current_step);
+        setProgressPct(statusData.progress_pct);
+
+        if (statusData.status === "completed" && !hasCompletedRef.current) {
+          hasCompletedRef.current = true;
+          clearInterval(pollRef.current);
+
+          // Fetch full result
+          const resultRes = await fetch(`${API_BASE}/result/${taskId}`);
+          if (resultRes.ok) {
+            const resultData = await resultRes.json();
+            onComplete(resultData);
+          }
+        }
+
+        if (statusData.status === "failed") {
+          hasCompletedRef.current = true;
+          clearInterval(pollRef.current);
+          console.error("Pipeline failed:", statusData.error);
+        }
+      } catch (err) {
+        console.error("Polling error:", err);
+      }
     };
 
-    const finishProcessing = () => {
-      if (hasCompletedRef.current) return;
+    // Initial poll
+    pollStatus();
 
-      hasCompletedRef.current = true;
-      clearTimers();
-      onComplete();
-    };
-
-    for (let stepIndex = 1; stepIndex < PIPELINE_STEPS.length; stepIndex += 1) {
-      const timerId = window.setTimeout(() => {
-        setCurrentStep(stepIndex);
-      }, STEP_DURATION_MS * stepIndex);
-
-      timerRefs.current.push(timerId);
-    }
-
-    const completionTimerId = window.setTimeout(() => {
-      finishProcessing();
-    }, STEP_DURATION_MS * PIPELINE_STEPS.length);
-    timerRefs.current.push(completionTimerId);
-
-    const fallbackTimerId = window.setTimeout(() => {
-      setCurrentStep(PIPELINE_STEPS.length - 1);
-      finishProcessing();
-    }, FALLBACK_TIMEOUT_MS);
-    timerRefs.current.push(fallbackTimerId);
+    // Start polling interval
+    pollRef.current = setInterval(pollStatus, POLL_INTERVAL_MS);
 
     return () => {
-      clearTimers();
+      if (pollRef.current) clearInterval(pollRef.current);
     };
-  }, [onComplete]);
+  }, [taskId, onComplete]);
+
+  // Fallback step labels if API hasn't responded yet
+  const displaySteps =
+    steps.length > 0
+      ? steps
+      : [
+          { name: "data_ingestion", description: "Reading historical fragments...", status: "pending" },
+          { name: "embedding", description: "Creating semantic embeddings...", status: "pending" },
+          { name: "reduction", description: "Mapping memories into coordinates...", status: "pending" },
+          { name: "mapping", description: "Translating data into notes...", status: "pending" },
+          { name: "generation", description: "Generating the final soundscape...", status: "pending" },
+        ];
 
   return (
-    <section
-      className="processing-section animate-fade-in"
-      id="processing-section"
-    >
+    <section className="processing-section animate-fade-in" id="processing-section">
       <h2>Synthesizing Memories...</h2>
       <div className="progress-container">
-        {PIPELINE_STEPS.map((step, index) => {
+        {displaySteps.map((step, index) => {
           let stepClass = "step";
-          if (index < currentStep) stepClass += " completed";
-          else if (index === currentStep) stepClass += " active";
+          if (step.status === "completed") stepClass += " completed";
+          else if (step.status === "active") stepClass += " active";
 
           return (
             <div key={index} className={stepClass}>
               <div className="step-icon">
-                {index < currentStep ? (
+                {step.status === "completed" ? (
                   <CheckCircle2 size={20} />
+                ) : step.status === "active" ? (
+                  <Loader2 size={20} className="spin-icon" />
                 ) : (
                   <Circle size={20} />
                 )}
               </div>
-              <span>{step}</span>
+              <span>{step.description}</span>
             </div>
           );
         })}
@@ -86,9 +98,7 @@ export default function ProcessingSection({ onComplete }) {
         <div className="progress-bar-bg">
           <div
             className="progress-bar-fill"
-            style={{
-              width: `${((currentStep + 1) / PIPELINE_STEPS.length) * 100}%`,
-            }}
+            style={{ width: `${progressPct}%` }}
           />
         </div>
       </div>
