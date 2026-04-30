@@ -49,6 +49,7 @@ app.mount("/output", StaticFiles(directory=str(output_path)), name="output")
 # --- Register routers ---
 app.include_router(health.router, prefix="/api/v1", tags=["Health"])
 app.include_router(pipeline.router, prefix="/api/v1/pipeline", tags=["Pipeline"])
+app.include_router(pipeline.router, prefix="/api/pipeline", tags=["Pipeline"])
 app.include_router(visualization.router, prefix="/api/v1/viz", tags=["Visualization"])
 
 

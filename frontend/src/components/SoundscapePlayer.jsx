@@ -1,5 +1,4 @@
 import { Download } from 'lucide-react';
-import { exportMidi } from '../utils/midiExport';
 import MoodSelector from './MoodSelector';
 
 export default function SoundscapePlayer({
@@ -7,6 +6,7 @@ export default function SoundscapePlayer({
   musicMetadata,
   selectedMood,
   onMoodChange,
+  midiUrl,
   isPreviewing,
   onPreviewToggle,
   onPreviewReset,
@@ -19,7 +19,8 @@ export default function SoundscapePlayer({
   const totalNotes = safeMelody.length;
 
   const handleDownloadMidi = () => {
-    exportMidi(safeMelody);
+    if (!midiUrl) return;
+    window.location.href = midiUrl;
   };
 
   return (
@@ -71,8 +72,8 @@ export default function SoundscapePlayer({
         <button
           className="secondary-btn"
           onClick={onPreviewToggle}
-          disabled={!safeMelody.length}
-          style={safeMelody.length ? { opacity: 1, cursor: 'pointer' } : {}}
+          disabled={!safeMelody.length || !midiUrl}
+          style={safeMelody.length && midiUrl ? { opacity: 1, cursor: 'pointer' } : {}}
         >
           {isPreviewing ? "Stop Preview" : "Preview Composition"}
         </button>

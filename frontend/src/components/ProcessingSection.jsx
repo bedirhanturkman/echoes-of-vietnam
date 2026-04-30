@@ -3,14 +3,14 @@ import { CheckCircle2, Circle, Loader2 } from "lucide-react";
 
 const STEP_INTERVAL_MS = 520;
 const LOCAL_STEPS = [
-  { name: "data_ingestion", description: "Reading historical fragments..." },
-  { name: "embedding", description: "Creating semantic embeddings..." },
-  { name: "reduction", description: "Mapping memories into coordinates..." },
-  { name: "mapping", description: "Translating data into notes..." },
-  { name: "generation", description: "Generating the final soundscape..." },
+  { name: "archive", description: "Reading historical fragments..." },
+  { name: "analysis", description: "Analyzing emotional weight..." },
+  { name: "themes", description: "Mapping themes to the threshold..." },
+  { name: "harmony", description: "Generating folk-inspired harmony..." },
+  { name: "composition", description: "Composing the memory melody..." },
 ];
 
-export default function ProcessingSection({ taskId, onComplete }) {
+export default function ProcessingSection({ taskId, error }) {
   const [steps, setSteps] = useState([]);
   const [progressPct, setProgressPct] = useState(0);
   const hasCompletedRef = useRef(false);
@@ -39,21 +39,20 @@ export default function ProcessingSection({ taskId, onComplete }) {
       if (hasCompletedRef.current) return;
       hasCompletedRef.current = true;
       setSteps(LOCAL_STEPS.map((step) => ({ ...step, status: "completed" })));
-      setProgressPct(100);
-      onComplete();
+      setProgressPct(96);
     }, LOCAL_STEPS.length * STEP_INTERVAL_MS));
 
     return () => {
       timersRef.current.forEach((timer) => window.clearTimeout(timer));
       timersRef.current = [];
     };
-  }, [taskId, onComplete]);
+  }, [taskId]);
 
   const displaySteps = steps.length > 0 ? steps : LOCAL_STEPS;
 
   return (
     <section className="processing-section animate-fade-in" id="processing-section">
-      <h2>Synthesizing Memories...</h2>
+      <h2>Opening the Archive...</h2>
       <div className="progress-container">
         {displaySteps.map((step, index) => {
           let stepClass = "step";
@@ -82,6 +81,11 @@ export default function ProcessingSection({ taskId, onComplete }) {
             style={{ width: `${progressPct}%` }}
           />
         </div>
+        {error && (
+          <p style={{ color: 'var(--danger)', marginTop: '1rem', fontSize: '0.95rem' }}>
+            {error}
+          </p>
+        )}
       </div>
     </section>
   );
