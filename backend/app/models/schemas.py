@@ -91,13 +91,19 @@ class PlaybackNote(BaseModel):
     duration: float
 
 
+class LyricLine(BaseModel):
+    """Single synchronized lyric line for the generated MIDI composition."""
+    start_beat: float
+    text: str
+
+
 class PipelineResultResponse(BaseModel):
     """Complete pipeline result — events + music metadata + download links."""
     task_id: str
     events: list[EventResult]
     music_metadata: MusicMetadata
     midi_url: str
-    playback_notes: list[PlaybackNote] = []
+    playback_notes: list[PlaybackNote] = Field(default_factory=list)
     interpretation_text: str
     lyrics: Optional[list[LyricLine]] = None
 

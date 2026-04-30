@@ -7,8 +7,6 @@ composition as JSON, which is then converted to MIDI.
 import json
 import traceback
 import random
-from google import genai
-from google.genai import types
 
 from app.config import settings
 from app.core.music_theory import (
@@ -31,6 +29,8 @@ class AIComposerService:
         self._client = None
 
     def _get_client(self):
+        from google import genai
+
         if self._client is None:
             self._client = genai.Client(api_key=settings.GEMINI_API_KEY)
         return self._client
@@ -67,6 +67,8 @@ class AIComposerService:
 
     async def _compose_with_gemini(self, metadata_list: list[dict], mapping_result) -> dict:
         """Call Gemini API with structured output to compose music."""
+        from google.genai import types
+
         client = self._get_client()
 
         # Build the event summary for the prompt
