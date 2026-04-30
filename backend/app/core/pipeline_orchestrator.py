@@ -130,15 +130,17 @@ class PipelineOrchestrator:
             print("[LLM] Interpretations generated successfully")
 
             # =====================================================
-            # STEP 5: MIDI Generation
+            # STEP 5: AI Music Composition + MIDI Generation
             # =====================================================
             task_manager.update_step(task_id, 4)
             await asyncio.sleep(0.3)
 
-            midi_url = self.music.generate_midi(mapping_result, task_id)
+            midi_url, lyrics = await self.music.generate_midi_with_ai(
+                mapping_result, full_metadata, task_id
+            )
             duration_seconds = self.music.get_duration_seconds(mapping_result)
 
-            print(f"[MIDI] Step 5 complete: MIDI saved -> {midi_url}")
+            print(f"[MIDI] Step 5 complete: AI-composed MIDI saved -> {midi_url} (with {len(lyrics)} lyric lines)")
 
             # =====================================================
             # Assemble final result
@@ -195,6 +197,7 @@ class PipelineOrchestrator:
                 music_metadata=music_metadata,
                 midi_url=midi_url,
                 interpretation_text=interpretation_text,
+                lyrics=lyrics,
             )
 
             task_manager.complete_task(task_id, result.model_dump())

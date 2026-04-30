@@ -36,6 +36,10 @@ class NoteEvent:
         start_time: float,
         chord: Optional[list[str]] = None,
         source_event_id: str = "",
+        category: str = "uncertainty",
+        casualties: int = 0,
+        section: str = "body",
+        sentiment: float = 0.0,
     ):
         self.pitch = pitch
         self.velocity = velocity
@@ -43,11 +47,16 @@ class NoteEvent:
         self.start_time = start_time
         self.chord = chord or []
         self.source_event_id = source_event_id
+        self.category = category
+        self.casualties = casualties
+        self.section = section
+        self.sentiment = sentiment
 
     def __repr__(self):
         return (
             f"NoteEvent(pitch={midi_note_to_name(self.pitch)}, "
-            f"vel={self.velocity}, dur={self.duration:.2f}, t={self.start_time:.2f})"
+            f"vel={self.velocity}, dur={self.duration:.2f}, t={self.start_time:.2f}, "
+            f"cat={self.category}, sec={self.section})"
         )
 
 
@@ -197,6 +206,9 @@ class MappingService:
             cluster_progression = self._get_cluster_progression(cluster, sentiment)
             chord_names = cluster_progression["chords"]
 
+            # --- Determine section ---
+            section = self._compute_section(i, len(metadata_list), casualties, max_casualties)
+
             # --- Create note event ---
             note = NoteEvent(
                 pitch=pitch,
@@ -205,6 +217,10 @@ class MappingService:
                 start_time=current_time,
                 chord=chord_names,
                 source_event_id=event_id,
+                category=category,
+                casualties=casualties,
+                section=section,
+                sentiment=sentiment,
             )
             result.notes.append(note)
 
@@ -232,6 +248,24 @@ class MappingService:
             return "cautiously hopeful"
         else:
             return "resolving / peaceful"
+
+    def _compute_section(
+        self, index: int, total: int, casualties: int, max_casualties: int
+    ) -> str:
+        """
+        Determine the structural section of the composition for this event.
+        Intro (first 10%), Outro (last 10%), Climax (top casualties), Body (rest).
+        """
+        position_ratio = index / max(total - 1, 1)
+
+        if position_ratio < 0.10:
+            return "intro"
+        elif position_ratio > 0.90:
+            return "outro"
+        elif max_casualties > 0 and casualties >= max_casualties * 0.7:
+            return "climax"
+        else:
+            return "body"
 
     def _get_cluster_progression(self, cluster_id: int, sentiment: float) -> dict:
         """Select a chord progression for a cluster based on sentiment."""
