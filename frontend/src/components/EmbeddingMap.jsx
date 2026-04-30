@@ -76,8 +76,34 @@ export default function EmbeddingMap({ data, selectedEvent, activePreviewEventId
             <span className="detail-value">{selectedEvent.category.replace('_', ' ')}</span>
           </div>
           <div className="detail-item">
-            <span className="detail-label">Sentiment:</span>
-            <span className="detail-value">{selectedEvent.sentiment}</span>
+            <span className="detail-label">Emotion:</span>
+            <span className="detail-value">{selectedEvent.dominantEmotion || selectedEvent.sentiment}</span>
+          </div>
+          {selectedEvent.themes?.length > 0 && (
+            <div className="detail-item">
+              <span className="detail-label">Themes:</span>
+              <span className="detail-value">{selectedEvent.themes.join(', ')}</span>
+            </div>
+          )}
+          {selectedEvent.aiSummary && (
+            <div className="detail-item">
+              <span className="detail-label">AI:</span>
+              <span className="detail-value">{selectedEvent.aiSummary}</span>
+            </div>
+          )}
+          {selectedEvent.musicalMapping && (
+            <div className="detail-item">
+              <span className="detail-label">Mapping:</span>
+              <span className="detail-value">
+                {selectedEvent.musicalMapping.scale} / {selectedEvent.musicalMapping.chord}
+              </span>
+            </div>
+          )}
+          <div className="detail-item">
+            <span className="detail-label">Weight:</span>
+            <span className="detail-value">
+              intensity {selectedEvent.intensity ?? '-'} / historical {selectedEvent.historicalWeight ?? '-'}
+            </span>
           </div>
           <div className="detail-item" style={{ marginTop: '0.5rem', paddingTop: '0.5rem', borderTop: '1px dashed var(--muted)'}}>
             <span className="detail-label">Sound:</span>

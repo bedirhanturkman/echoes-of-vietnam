@@ -2,52 +2,22 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import IntroSection from "./components/IntroSection";
 import UploadSection from "./components/UploadSection";
+import DoorTransition from "./components/DoorTransition";
 import ProcessingSection from "./components/ProcessingSection";
 import ResultSection from "./components/ResultSection";
 import AboutSection from "./components/AboutSection";
-import { DEFAULT_MOOD, generateMelodyFromData, getMusicMetadata } from "./utils/musicGeneration";
+import { DEFAULT_MOOD } from "./utils/musicGeneration";
+import { generateSoundscape } from "./services/api";
 import "./App.css";
-
-const CATEGORY_COORDS = {
-  conflict: { x: 18, y: 28 },
-  peace_talks: { x: 78, y: 78 },
-  civilian_impact: { x: 28, y: 36 },
-  political_transition: { x: 58, y: 48 },
-  uncertainty: { x: 42, y: 55 },
-};
-
-const normalizeResultEvents = (events) =>
-  events.map((event, index) => {
-    const category = String(event.category || "uncertainty");
-    const fallback = CATEGORY_COORDS[category] || CATEGORY_COORDS.uncertainty;
-    return {
-      id: String(event.id || `e${index + 1}`),
-      date: String(event.date || ""),
-      title: String(event.title || `Historical event ${index + 1}`),
-      category,
-      sentiment: Number(event.sentiment ?? 0),
-      x: Number.isFinite(Number(event.x)) ? Number(event.x) : fallback.x + index * 1.5,
-      y: Number.isFinite(Number(event.y)) ? Number(event.y) : fallback.y,
-      musicalInterpretation:
-        event.musicalInterpretation ||
-        "A data-shaped phrase rendered from the generated melody.",
-    };
-  });
-
-const buildResultFromData = (events, melody, moodId) => {
-  return {
-    events: normalizeResultEvents(events),
-    musicMetadata: getMusicMetadata(melody, moodId),
-    interpretationText: `Each historical event contributes to the composition. Semantic/category clusters choose harmonic sections, mood selects scale and tempo, event coordinates influence pitch and velocity, and intensity shapes duration. The final MIDI combines melody, bass, and chord layers.`,
-  };
-};
 
 function App() {
   const [appState, setAppState] = useState("intro"); // intro, upload, processing, result
   const [taskId, setTaskId] = useState(null);
-  const [sourceData, setSourceData] = useState([]);
+  const [datasetRequest, setDatasetRequest] = useState(null);
   const [generatedMelody, setGeneratedMelody] = useState(null);
   const [pipelineResult, setPipelineResult] = useState(null);
+  const [soundscapeVariants, setSoundscapeVariants] = useState({});
+  const [backendError, setBackendError] = useState(null);
   const [selectedMood, setSelectedMood] = useState(DEFAULT_MOOD);
   const [previewTime, setPreviewTime] = useState(0);
   const [isPreviewing, setIsPreviewing] = useState(false);
@@ -61,6 +31,7 @@ function App() {
   useEffect(() => {
     const sectionIdByState = {
       upload: "upload-section",
+      doorTransition: "door-transition-section",
       processing: "processing-section",
       result: "result-section",
     };
@@ -81,42 +52,56 @@ function App() {
     setAppState("upload");
   }, []);
 
-  const handlePipelineStart = useCallback((events) => {
-    setSourceData(events);
+  const handlePipelineStart = useCallback((request) => {
+    setDatasetRequest(request);
     setGeneratedMelody(null);
     setPipelineResult(null);
+    setSoundscapeVariants({});
+    setBackendError(null);
     setPreviewTime(0);
     setIsPreviewing(false);
     setActivePreviewEventId(null);
     hasGeneratedMelodyRef.current = false;
-    setTaskId(`local-${Date.now()}`);
-    setAppState("processing");
+    setTaskId(null);
+    setAppState("doorTransition");
   }, []);
 
-  const handleProcessingComplete = useCallback(() => {
-    if (hasGeneratedMelodyRef.current) return;
-    hasGeneratedMelodyRef.current = true;
+  const runBackendGeneration = useCallback(async (request, mood) => {
+    setBackendError(null);
+    const result = await generateSoundscape(request, mood);
+    const variants = result.variants || {};
+    const selectedResult = variants[mood] || result;
+    setSoundscapeVariants(variants);
+    setGeneratedMelody(selectedResult.melody);
+    setPipelineResult(selectedResult);
+    setAppState("result");
+  }, []);
 
-    const melody = generateMelodyFromData(sourceData, selectedMood);
-    const result = buildResultFromData(sourceData, melody, selectedMood);
-    setGeneratedMelody(melody);
-    setPipelineResult(result);
-    setAppState((currentState) =>
-      currentState === "result" ? currentState : "result"
-    );
-  }, [selectedMood, sourceData]);
+  const handleDoorOpen = useCallback(() => {
+    setTaskId(`local-${Date.now()}`);
+    setAppState("processing");
+    hasGeneratedMelodyRef.current = true;
+    runBackendGeneration(datasetRequest, selectedMood).catch((error) => {
+      setBackendError(error.message || "Backend generation failed.");
+    });
+  }, [datasetRequest, runBackendGeneration, selectedMood]);
 
   const handleMoodChange = useCallback((moodId) => {
     setSelectedMood(moodId);
     setPreviewTime(0);
     setIsPreviewing(false);
     setActivePreviewEventId(null);
-    if (!sourceData.length || appState !== "result") return;
+    if (appState !== "result") return;
 
-    const melody = generateMelodyFromData(sourceData, moodId);
-    setGeneratedMelody(melody);
-    setPipelineResult(buildResultFromData(sourceData, melody, moodId));
-  }, [appState, sourceData]);
+    const selectedResult = soundscapeVariants[moodId];
+    if (selectedResult) {
+      setGeneratedMelody(selectedResult.melody);
+      setPipelineResult(selectedResult);
+      return;
+    }
+
+    setBackendError("Selected mood variant is not available. Please generate the dataset again.");
+  }, [appState, soundscapeVariants]);
 
   const totalPreviewDuration = (generatedMelody || []).reduce(
     (latest, note) => Math.max(latest, note.startTime + note.duration),
@@ -186,13 +171,18 @@ function App() {
       <IntroSection onBegin={handleBegin} />
 
       {(appState === "upload" ||
+        appState === "doorTransition" ||
         appState === "processing" ||
         appState === "result") && (
         <UploadSection onPipelineStart={handlePipelineStart} />
       )}
 
+      {appState === "doorTransition" && datasetRequest && (
+        <DoorTransition datasetLabel={datasetRequest.label} onKnock={handleDoorOpen} />
+      )}
+
       {appState === "processing" && taskId && (
-        <ProcessingSection taskId={taskId} onComplete={handleProcessingComplete} />
+        <ProcessingSection taskId={taskId} error={backendError} />
       )}
 
       {appState === "result" && pipelineResult && (

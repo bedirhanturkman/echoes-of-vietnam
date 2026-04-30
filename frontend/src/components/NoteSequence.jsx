@@ -4,6 +4,8 @@ const ROLE_HEIGHT = {
   melody: 14,
   chord: 10,
   bass: 12,
+  harmony: 9,
+  beat: 11,
 };
 
 export default function NoteSequence({
