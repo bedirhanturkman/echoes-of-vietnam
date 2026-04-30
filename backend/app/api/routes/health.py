@@ -1,9 +1,7 @@
 """
-Health check endpoint.
+Health check endpoint — The Echoing Threshold
 """
-
 from fastapi import APIRouter
-
 from app.config import settings
 from app.models.schemas import HealthResponse
 
@@ -12,14 +10,10 @@ router = APIRouter()
 
 @router.get("/health", response_model=HealthResponse)
 async def health_check():
-    """Check if all services are operational."""
+    """Check if all AI services are configured and operational."""
     return HealthResponse(
         status="ok",
-        version="1.0.0",
-        services={
-            "api": "running",
-            "mock_embeddings": "enabled" if settings.USE_MOCK_EMBEDDINGS else "disabled",
-            "openai": "configured" if not settings.USE_MOCK_EMBEDDINGS else "not_required",
-            "midi_generator": "ready",
-        },
+        groq_configured=bool(settings.GROQ_API_KEY),
+        gemini_configured=bool(settings.GEMINI_API_KEY),
+        version="2.0.0",
     )

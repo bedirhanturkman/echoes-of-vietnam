@@ -1,8 +1,7 @@
 """
-FastAPI application entry point.
-Sets up CORS, static file serving, and route registration.
+FastAPI application entry point — The Echoing Threshold
+An immersive audio-visual installation driven by Groq + Gemini AI.
 """
-
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -12,27 +11,35 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.config import settings
-from app.api.routes import pipeline, visualization, health
+from app.api.routes import conversation, health
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Create output directory on startup."""
+    """Startup: ensure output directory exists."""
     output_path = Path(settings.OUTPUT_DIR)
     output_path.mkdir(parents=True, exist_ok=True)
-    print(f"[OK] Output directory ready: {output_path.resolve()}")
-    print(f"[MUSIC] Mock embeddings: {'ON' if settings.USE_MOCK_EMBEDDINGS else 'OFF'}")
+    print("=" * 50)
+    print("  THE ECHOING THRESHOLD  v2.0")
+    print("=" * 50)
+    print(f"  Groq API  : {'OK - Configured' if settings.GROQ_API_KEY else 'MISSING'}")
+    print(f"  Gemini API: {'OK - Configured' if settings.GEMINI_API_KEY else 'MISSING'}")
+    print(f"  Character : {settings.DEFAULT_CHARACTER}")
+    print("=" * 50)
     yield
 
 
 app = FastAPI(
-    title="Echoes of the Vietnam Frontier",
-    description="Data sonification API — transforms historical war records into music",
-    version="1.0.0",
+    title="The Echoing Threshold",
+    description=(
+        "A living audio-visual installation — the user's emotional state "
+        "reshapes the atmosphere in real time via Groq + Gemini AI."
+    ),
+    version="2.0.0",
     lifespan=lifespan,
 )
 
-# --- CORS Middleware ---
+# ── CORS ──────────────────────────────────────────────────────────
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
@@ -41,22 +48,25 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- Static files (serve generated MIDI/WAV) ---
+# ── Static files (output dir) ─────────────────────────────────────
 output_path = Path(settings.OUTPUT_DIR)
 output_path.mkdir(parents=True, exist_ok=True)
 app.mount("/output", StaticFiles(directory=str(output_path)), name="output")
 
-# --- Register routers ---
+# ── Routes ────────────────────────────────────────────────────────
 app.include_router(health.router, prefix="/api/v1", tags=["Health"])
-app.include_router(pipeline.router, prefix="/api/v1/pipeline", tags=["Pipeline"])
-app.include_router(pipeline.router, prefix="/api/pipeline", tags=["Pipeline"])
-app.include_router(visualization.router, prefix="/api/v1/viz", tags=["Visualization"])
+app.include_router(conversation.router, prefix="/api/v1/conversation", tags=["Conversation"])
 
 
 @app.get("/", include_in_schema=False)
 async def root():
     return {
-        "project": "Echoes of the Vietnam Frontier",
-        "description": "Data sonification API",
+        "project": "The Echoing Threshold",
+        "description": "A living AI-powered audio-visual installation",
         "docs": "/docs",
+        "version": "2.0.0",
+        "models": {
+            "emotion_analysis": "Groq / llama-3-70b-8192",
+            "context_enrichment": "Gemini 1.5 Pro",
+        },
     }

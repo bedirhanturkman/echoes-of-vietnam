@@ -1,42 +1,25 @@
 """
-Application settings loaded from environment variables.
-Uses pydantic-settings for validation and .env file support.
+Configuration settings for The Echoing Threshold.
+Loads from .env file using pydantic-settings.
 """
-
+from typing import List
 from pydantic_settings import BaseSettings
-from typing import Optional
 
 
 class Settings(BaseSettings):
-    """Central configuration for the Echoes of Vietnam backend."""
-
-    # --- AI Providers ---
-    GEMINI_API_KEY: str = ""
+    # AI Model API Keys
     GROQ_API_KEY: str = ""
-    USE_MOCK_EMBEDDINGS: bool = True  # Set False when real API key is available
+    GEMINI_API_KEY: str = ""
 
-    # --- Musical Defaults ---
-    DEFAULT_SCALE: str = "C_major_pentatonic"
-    DEFAULT_TEMPO: int = 72
-    DEFAULT_PROGRESSION: str = "knockin_verse"
-
-    # --- CORS ---
-    CORS_ORIGINS: list[str] = [
-        "http://localhost:5173",   # Vite dev server
-        "http://localhost:3000",
-        "http://127.0.0.1:5173",
-    ]
-
-    # --- Paths ---
+    # App Settings
+    CORS_ORIGINS: List[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+    DEFAULT_CHARACTER: str = "bob_dylan_1973"
     OUTPUT_DIR: str = "output"
-    DATA_DIR: str = "data"
 
-    model_config = {
-        "env_file": ".env",
-        "env_file_encoding": "utf-8",
-        "extra": "ignore",
-    }
+    # Historical Context
+    HISTORICAL_PERIOD: int = 1973
+
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
 
 
-# Singleton settings instance
 settings = Settings()
