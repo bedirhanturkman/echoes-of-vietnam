@@ -99,6 +99,7 @@ class PipelineResultResponse(BaseModel):
     midi_url: str
     playback_notes: list[PlaybackNote] = []
     interpretation_text: str
+    lyrics: Optional[list[LyricLine]] = None
 
 
 class HealthResponse(BaseModel):

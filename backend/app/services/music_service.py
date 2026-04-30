@@ -1,75 +1,119 @@
 """
-Music Generation Service.
-Creates MIDI files from mapped musical data using MIDIUtil.
+Music Generation Service — JSON-to-MIDI Converter.
+Receives AI-composed music as structured JSON and converts it to a MIDI file.
+The actual composition is done by AIComposerService (Gemini).
 """
 
-import os
 from pathlib import Path
 from midiutil import MIDIFile
 
-from app.services.mapping_service import MappingResult, NoteEvent
-from app.core.music_theory import CHORD_MIDI
+from app.services.mapping_service import MappingResult
+from app.services.ai_composer_service import AIComposerService
+from app.core.music_theory import humanize_timing, humanize_velocity
 from app.config import settings
 
 
 class MusicService:
     """
-    Generate MIDI files from MappingResult data.
-    Uses MIDIUtil for pure-Python MIDI creation.
+    Orchestrates AI composition and MIDI file generation.
+    1. Calls AIComposerService to get a multi-track composition (JSON)
+    2. Converts the JSON to a .mid file using MIDIUtil
     """
 
-    def generate_midi(self, mapping_result: MappingResult, task_id: str) -> str:
+    def __init__(self):
+        self.composer = AIComposerService()
+
+    async def generate_midi_with_ai(
+        self,
+        mapping_result: MappingResult,
+        metadata_list: list[dict],
+        task_id: str,
+    ) -> tuple[str, list[dict]]:
         """
-        Generate a MIDI file from the mapping result.
+        Generate a MIDI file using AI-composed music.
 
         Args:
-            mapping_result: Result from MappingService containing notes, tempo, etc.
+            mapping_result: MappingResult with scale, mood, tempo context
+            metadata_list: Event metadata for AI prompt context
+            task_id: Task identifier for filename
+
+        Returns:
+            Tuple of (Relative URL path to MIDI file, lyrics list)
+        """
+        # Step 1: Get AI composition
+        print("[MUSIC] Requesting AI composition from Gemini...")
+        composition = await self.composer.compose(metadata_list, mapping_result)
+
+        # Step 2: Convert JSON to MIDI
+        midi_url = self._json_to_midi(composition, task_id)
+        
+        lyrics = composition.get("lyrics", [])
+
+        return midi_url, lyrics
+
+    def _json_to_midi(self, composition: dict, task_id: str) -> str:
+        """
+        Convert AI-generated composition JSON to a MIDI file.
+
+        Args:
+            composition: dict with tempo, tracks[], each track with notes[]
             task_id: Task identifier for filename
 
         Returns:
             Relative URL path to the generated MIDI file
         """
-        # Create MIDI file with 2 tracks: melody + chords
+        tracks = composition.get("tracks", [])
+        num_tracks = len(tracks)
+
+        if num_tracks == 0:
+            raise ValueError("Composition has no tracks")
+
         midi = MIDIFile(
-            numTracks=2,
+            numTracks=num_tracks,
             removeDuplicates=True,
             deinterleave=True,
         )
 
-        tempo = mapping_result.tempo
-        melody_track = 0
-        chord_track = 1
-        melody_channel = 0
-        chord_channel = 1
-        time = 0  # Start at the beginning
+        tempo = composition.get("tempo", 72)
 
-        # Track names
-        midi.addTrackName(melody_track, time, "Vietnam Echoes - Melody")
-        midi.addTrackName(chord_track, time, "Vietnam Echoes - Chords")
+        # Process each track
+        total_notes = 0
+        for track_idx, track_data in enumerate(tracks):
+            track_name = track_data.get("name", f"Track {track_idx}")
+            instrument = int(track_data.get("instrument", 0))
+            channel = int(track_data.get("channel", track_idx))
+            notes = track_data.get("notes", [])
 
-        # Set tempo
-        midi.addTempo(melody_track, time, tempo)
-        midi.addTempo(chord_track, time, tempo)
+            # Ensure channel is valid (0-15) and not 9 unless it's drums
+            channel = channel % 16
 
-        # Set instruments
-        midi.addProgramChange(melody_track, melody_channel, 0, 0)   # Acoustic Grand Piano
-        midi.addProgramChange(chord_track, chord_channel, 0, 24)    # Nylon Guitar (Dylan-esque)
+            # Set track metadata
+            midi.addTrackName(track_idx, 0, track_name)
+            midi.addTempo(track_idx, 0, tempo)
 
-        # --- Add melody notes ---
-        for note in mapping_result.notes:
-            midi.addNote(
-                track=melody_track,
-                channel=melody_channel,
-                pitch=note.pitch,
-                time=note.start_time,
-                duration=note.duration,
-                volume=note.velocity,
-            )
+            # Set instrument (program change)
+            # Channel 9 is reserved for drums in GM — don't set program change
+            if channel != 9:
+                midi.addProgramChange(track_idx, channel, 0, instrument)
 
-        # --- Add chord accompaniment ---
-        self._add_chord_track(midi, chord_track, chord_channel, mapping_result)
+            # Add notes
+            for note_data in notes:
+                pitch = max(36, min(96, int(note_data.get("pitch", 60))))
+                start_time = max(0.0, float(note_data.get("start_time", 0)))
+                duration = max(0.1, float(note_data.get("duration", 1.0)))
+                velocity = max(30, min(120, int(note_data.get("velocity", 80))))
 
-        # --- Write to file ---
+                midi.addNote(
+                    track=track_idx,
+                    channel=channel,
+                    pitch=pitch,
+                    time=humanize_timing(start_time),
+                    duration=duration,
+                    volume=humanize_velocity(velocity, 3),
+                )
+                total_notes += 1
+
+        # Write to file
         output_dir = Path(settings.OUTPUT_DIR)
         output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -79,81 +123,12 @@ class MusicService:
         with open(filepath, "wb") as f:
             midi.writeFile(f)
 
-        print(f"[MIDI] MIDI file generated: {filepath}")
+        print(
+            f"[MIDI] AI-composed MIDI saved: {filepath} "
+            f"({num_tracks} tracks, {total_notes} notes, {tempo} BPM)"
+        )
 
-        # Return URL path for frontend download
         return f"/output/{filename}"
-
-    def _add_chord_track(
-        self,
-        midi: MIDIFile,
-        track: int,
-        channel: int,
-        mapping_result: MappingResult,
-    ):
-        """
-        Add chord accompaniment based on the events' chord progressions.
-        Chords change based on the data-driven progression assignments.
-        """
-        if not mapping_result.notes:
-            return
-
-        # Group notes by their chord progression
-        current_chord_names = None
-        chord_start = 0.0
-        chord_volume = 60  # Softer than melody
-
-        for note in mapping_result.notes:
-            chord_names = note.chord
-
-            if chord_names != current_chord_names:
-                # Write previous chord if it existed
-                if current_chord_names is not None:
-                    chord_duration = note.start_time - chord_start
-                    if chord_duration > 0:
-                        self._write_chord(
-                            midi, track, channel,
-                            current_chord_names, chord_start,
-                            chord_duration, chord_volume,
-                        )
-
-                current_chord_names = chord_names
-                chord_start = note.start_time
-
-        # Write the last chord
-        if current_chord_names and mapping_result.notes:
-            last_note = mapping_result.notes[-1]
-            chord_duration = last_note.start_time + last_note.duration - chord_start
-            if chord_duration > 0:
-                self._write_chord(
-                    midi, track, channel,
-                    current_chord_names, chord_start,
-                    chord_duration, chord_volume,
-                )
-
-    def _write_chord(
-        self,
-        midi: MIDIFile,
-        track: int,
-        channel: int,
-        chord_names: list[str],
-        start_time: float,
-        duration: float,
-        volume: int,
-    ):
-        """Write a chord (multiple simultaneous notes) to the MIDI file."""
-        for chord_name in chord_names:
-            midi_notes = CHORD_MIDI.get(chord_name)
-            if midi_notes:
-                for pitch in midi_notes:
-                    midi.addNote(
-                        track=track,
-                        channel=channel,
-                        pitch=pitch,
-                        time=start_time,
-                        duration=min(duration, 4.0),  # Max 4 beats per chord
-                        volume=volume,
-                    )
 
     def get_duration_seconds(self, mapping_result: MappingResult) -> float:
         """Calculate the total duration of the composition in seconds."""

@@ -126,3 +126,176 @@ def midi_note_to_name(midi_note: int) -> str:
     octave = (midi_note // 12) - 1
     name = note_names[midi_note % 12]
     return f"{name}{octave}"
+
+
+# ---------------------------------------------------------------------------
+# General MIDI Instrument Programs — Role-based orchestration palette
+# ---------------------------------------------------------------------------
+
+GM_INSTRUMENTS = {
+    # Strings layer — sustained harmonic foundation
+    "strings_ensemble": 49,     # String Ensemble 1
+    "strings_slow":     50,     # String Ensemble 2 (slower attack)
+    "cello":            43,     # Cello (solo, dark melody)
+    "violin":           41,     # Violin (bright melody)
+
+    # Bass layer — harmonic anchor
+    "acoustic_bass":    33,     # Acoustic Bass
+    "fingered_bass":    34,     # Electric Bass (finger)
+
+    # Melody / Lead instruments
+    "piano":            0,      # Acoustic Grand Piano
+    "acoustic_guitar":  25,     # Acoustic Guitar (steel)
+    "nylon_guitar":     24,     # Acoustic Guitar (nylon) — Dylan-esque
+
+    # Woodwinds — counter-melody, ornaments
+    "flute":            74,     # Flute
+    "oboe":             69,     # Oboe (mournful)
+    "clarinet":         72,     # Clarinet
+
+    # Brass — accents on high-impact events
+    "french_horn":      61,     # French Horn
+    "trumpet":          57,     # Trumpet
+    "trombone":         58,     # Trombone
+
+    # Arpeggiated / textural
+    "harp":             47,     # Orchestral Harp
+    "vibraphone":       12,     # Vibraphone
+    "celesta":          9,      # Celesta (ethereal)
+    "music_box":        11,     # Music Box
+
+    # Pads (for intro/outro atmosphere)
+    "pad_warm":         90,     # Pad 3 (polysynth)
+    "pad_choir":        92,     # Pad 5 (bowed)
+}
+
+# ---------------------------------------------------------------------------
+# Category → Lead Melody Instrument
+# Each event category produces a different timbre for its melody voice
+# ---------------------------------------------------------------------------
+
+CATEGORY_INSTRUMENTS = {
+    "conflict":             GM_INSTRUMENTS["cello"],           # 43 — dark, intense
+    "peace_talks":          GM_INSTRUMENTS["acoustic_guitar"], # 25 — warm, folk
+    "civilian_impact":      GM_INSTRUMENTS["oboe"],            # 69 — mournful, vocal
+    "political_transition": GM_INSTRUMENTS["piano"],           # 0  — stately
+    "uncertainty":          GM_INSTRUMENTS["vibraphone"],       # 12 — ethereal, ambiguous
+}
+
+# ---------------------------------------------------------------------------
+# Percussion — General MIDI Drum Map (Channel 10)
+# Standard GM drum note numbers
+# ---------------------------------------------------------------------------
+
+DRUM_NOTES = {
+    "kick":          36,   # Bass Drum 1
+    "snare":         38,   # Acoustic Snare
+    "side_stick":    37,   # Side Stick (rimshot)
+    "closed_hihat":  42,   # Closed Hi-Hat
+    "open_hihat":    46,   # Open Hi-Hat
+    "ride":          51,   # Ride Cymbal 1
+    "crash":         49,   # Crash Cymbal 1
+    "floor_tom":     41,   # Low Floor Tom
+    "mid_tom":       47,   # Low-Mid Tom
+    "tambourine":    54,   # Tambourine
+    "shaker":        70,   # Maracas
+}
+
+# Rhythm patterns: lists of (drum_note, beat_offset, velocity) per beat
+# "low" = gentle pulse, "mid" = moderate groove, "high" = intense
+RHYTHM_PATTERNS = {
+    "low": [
+        # Gentle brush-like pulse — ride + soft kick on downbeat
+        (DRUM_NOTES["ride"],     0.0,  45),
+        (DRUM_NOTES["ride"],     1.0,  35),
+        (DRUM_NOTES["ride"],     2.0,  40),
+        (DRUM_NOTES["ride"],     3.0,  35),
+        (DRUM_NOTES["kick"],     0.0,  40),
+    ],
+    "mid": [
+        # Moderate groove — kick-snare backbone with hihat
+        (DRUM_NOTES["closed_hihat"],  0.0,   50),
+        (DRUM_NOTES["closed_hihat"],  0.5,   40),
+        (DRUM_NOTES["closed_hihat"],  1.0,   50),
+        (DRUM_NOTES["closed_hihat"],  1.5,   40),
+        (DRUM_NOTES["closed_hihat"],  2.0,   50),
+        (DRUM_NOTES["closed_hihat"],  2.5,   40),
+        (DRUM_NOTES["closed_hihat"],  3.0,   50),
+        (DRUM_NOTES["closed_hihat"],  3.5,   40),
+        (DRUM_NOTES["kick"],          0.0,   70),
+        (DRUM_NOTES["kick"],          2.0,   65),
+        (DRUM_NOTES["snare"],         1.0,   55),
+        (DRUM_NOTES["snare"],         3.0,   55),
+    ],
+    "high": [
+        # Intense — driving kick pattern, open hihat, crash accents
+        (DRUM_NOTES["closed_hihat"],  0.0,   70),
+        (DRUM_NOTES["closed_hihat"],  0.5,   55),
+        (DRUM_NOTES["open_hihat"],    1.0,   65),
+        (DRUM_NOTES["closed_hihat"],  1.5,   55),
+        (DRUM_NOTES["closed_hihat"],  2.0,   70),
+        (DRUM_NOTES["closed_hihat"],  2.5,   55),
+        (DRUM_NOTES["open_hihat"],    3.0,   65),
+        (DRUM_NOTES["closed_hihat"],  3.5,   55),
+        (DRUM_NOTES["kick"],          0.0,   90),
+        (DRUM_NOTES["kick"],          1.0,   75),
+        (DRUM_NOTES["kick"],          2.0,   90),
+        (DRUM_NOTES["kick"],          2.5,   70),
+        (DRUM_NOTES["snare"],         1.0,   80),
+        (DRUM_NOTES["snare"],         3.0,   80),
+        (DRUM_NOTES["crash"],         0.0,   85),
+    ],
+}
+
+# ---------------------------------------------------------------------------
+# Arpeggio patterns — index offsets into chord tones
+# Each pattern defines the order of chord-tone indices to cycle through
+# ---------------------------------------------------------------------------
+
+ARPEGGIO_PATTERNS = {
+    "up":       [0, 1, 2],           # Root → 3rd → 5th
+    "down":     [2, 1, 0],           # 5th → 3rd → Root
+    "broken":   [0, 2, 1, 0],       # Root → 5th → 3rd → Root
+    "rolling":  [0, 1, 2, 1],       # Root → 3rd → 5th → 3rd
+    "full":     [0, 1, 2, 1, 0, 2], # Wider arpeggio cycle
+}
+
+# ---------------------------------------------------------------------------
+# Chord root notes (MIDI) — for bass line generation
+# ---------------------------------------------------------------------------
+
+CHORD_ROOTS = {
+    "C":   48,   # C3
+    "D":   50,   # D3
+    "Dm":  50,   # D3
+    "E":   52,   # E3
+    "Em":  52,   # E3
+    "G":   43,   # G2
+    "A":   45,   # A2
+    "Am":  45,   # A2
+    "Am7": 45,   # A2
+}
+
+
+# ---------------------------------------------------------------------------
+# Humanization utilities — make MIDI output sound more natural
+# ---------------------------------------------------------------------------
+
+import random
+
+
+def humanize_timing(time: float, amount: float = 0.03) -> float:
+    """
+    Add subtle random offset to note start time for natural feel.
+    Amount is in beats (0.03 ≈ 10ms at 120 BPM).
+    """
+    offset = random.uniform(-amount, amount)
+    return max(0.0, time + offset)
+
+
+def humanize_velocity(velocity: int, amount: int = 5) -> int:
+    """
+    Add small random variation to velocity for dynamic realism.
+    """
+    offset = random.randint(-amount, amount)
+    return max(VELOCITY_MIN, min(VELOCITY_MAX, velocity + offset))
