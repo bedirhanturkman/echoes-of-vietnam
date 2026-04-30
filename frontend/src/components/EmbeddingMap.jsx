@@ -1,4 +1,3 @@
-import React from 'react';
 import { ScatterChart, Scatter, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 
 const CATEGORY_COLORS = {
@@ -9,21 +8,20 @@ const CATEGORY_COLORS = {
   uncertainty: '#6f8796'       // blue-muted
 };
 
-export default function EmbeddingMap({ data, selectedEvent, onSelectEvent }) {
-  
-  const CustomTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload;
-      return (
-        <div style={{ backgroundColor: 'var(--panel-soft)', padding: '10px', border: '1px solid var(--muted)', borderRadius: '4px' }}>
-          <p style={{ color: 'var(--text)', margin: 0, fontWeight: 500 }}>{data.title}</p>
-          <p style={{ color: 'var(--muted)', margin: 0, fontSize: '0.8rem' }}>{data.date}</p>
-        </div>
-      );
-    }
-    return null;
-  };
+function CustomTooltip({ active, payload }) {
+  if (active && payload && payload.length) {
+    const data = payload[0].payload;
+    return (
+      <div style={{ backgroundColor: 'var(--panel-soft)', padding: '10px', border: '1px solid var(--muted)', borderRadius: '4px' }}>
+        <p style={{ color: 'var(--text)', margin: 0, fontWeight: 500 }}>{data.title}</p>
+        <p style={{ color: 'var(--muted)', margin: 0, fontSize: '0.8rem' }}>{data.date}</p>
+      </div>
+    );
+  }
+  return null;
+}
 
+export default function EmbeddingMap({ data, selectedEvent, activePreviewEventId, onSelectEvent }) {
   return (
     <div className="panel-card">
       <h3>Historical Embedding Map</h3>
@@ -42,17 +40,25 @@ export default function EmbeddingMap({ data, selectedEvent, onSelectEvent }) {
               data={data} 
               onClick={(e) => onSelectEvent(e.payload || e)}
             >
-              {data.map((entry, index) => (
-                <Cell 
-                  key={`cell-${index}`} 
-                  fill={CATEGORY_COLORS[entry.category] || '#ffffff'} 
-                  cursor="pointer"
-                  style={{ transition: 'all 0.3s' }}
-                  r={selectedEvent?.id === entry.id ? 8 : 5}
-                  stroke={selectedEvent?.id === entry.id ? 'var(--text)' : 'none'}
-                  strokeWidth={2}
-                />
-              ))}
+              {data.map((entry, index) => {
+                const isSelected = selectedEvent?.id === entry.id;
+                const isPreviewActive = activePreviewEventId === entry.id;
+
+                return (
+                  <Cell
+                    key={`cell-${index}`}
+                    fill={CATEGORY_COLORS[entry.category] || '#ffffff'}
+                    cursor="pointer"
+                    style={{
+                      filter: isPreviewActive ? 'drop-shadow(0 0 8px var(--accent))' : 'none',
+                      transition: 'all 0.3s',
+                    }}
+                    r={isSelected || isPreviewActive ? 9 : 5}
+                    stroke={isSelected || isPreviewActive ? 'var(--text)' : 'none'}
+                    strokeWidth={isPreviewActive ? 3 : 2}
+                  />
+                );
+              })}
             </Scatter>
           </ScatterChart>
         </ResponsiveContainer>

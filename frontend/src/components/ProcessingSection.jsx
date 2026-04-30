@@ -1,74 +1,55 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { CheckCircle2, Circle, Loader2 } from "lucide-react";
 
-const API_BASE = "/api/v1/pipeline";
-const POLL_INTERVAL_MS = 800;
+const STEP_INTERVAL_MS = 520;
+const LOCAL_STEPS = [
+  { name: "data_ingestion", description: "Reading historical fragments..." },
+  { name: "embedding", description: "Creating semantic embeddings..." },
+  { name: "reduction", description: "Mapping memories into coordinates..." },
+  { name: "mapping", description: "Translating data into notes..." },
+  { name: "generation", description: "Generating the final soundscape..." },
+];
 
 export default function ProcessingSection({ taskId, onComplete }) {
   const [steps, setSteps] = useState([]);
-  const [currentStep, setCurrentStep] = useState(0);
   const [progressPct, setProgressPct] = useState(0);
   const hasCompletedRef = useRef(false);
-  const pollRef = useRef(null);
+  const timersRef = useRef([]);
 
   useEffect(() => {
     if (!taskId) return;
     hasCompletedRef.current = false;
 
-    const pollStatus = async () => {
-      try {
-        const statusRes = await fetch(`${API_BASE}/status/${taskId}`);
-        if (!statusRes.ok) return;
+    timersRef.current = LOCAL_STEPS.map((_, index) =>
+      window.setTimeout(() => {
+        setProgressPct(Math.round(((index + 1) / LOCAL_STEPS.length) * 100));
+        setSteps(LOCAL_STEPS.map((step, stepIndex) => ({
+          ...step,
+          status:
+            stepIndex < index
+              ? "completed"
+              : stepIndex === index
+                ? "active"
+                : "pending",
+        })));
+      }, index * STEP_INTERVAL_MS)
+    );
 
-        const statusData = await statusRes.json();
-        setSteps(statusData.steps || []);
-        setCurrentStep(statusData.current_step);
-        setProgressPct(statusData.progress_pct);
-
-        if (statusData.status === "completed" && !hasCompletedRef.current) {
-          hasCompletedRef.current = true;
-          clearInterval(pollRef.current);
-
-          // Fetch full result
-          const resultRes = await fetch(`${API_BASE}/result/${taskId}`);
-          if (resultRes.ok) {
-            const resultData = await resultRes.json();
-            onComplete(resultData);
-          }
-        }
-
-        if (statusData.status === "failed") {
-          hasCompletedRef.current = true;
-          clearInterval(pollRef.current);
-          console.error("Pipeline failed:", statusData.error);
-        }
-      } catch (err) {
-        console.error("Polling error:", err);
-      }
-    };
-
-    // Initial poll
-    pollStatus();
-
-    // Start polling interval
-    pollRef.current = setInterval(pollStatus, POLL_INTERVAL_MS);
+    timersRef.current.push(window.setTimeout(() => {
+      if (hasCompletedRef.current) return;
+      hasCompletedRef.current = true;
+      setSteps(LOCAL_STEPS.map((step) => ({ ...step, status: "completed" })));
+      setProgressPct(100);
+      onComplete();
+    }, LOCAL_STEPS.length * STEP_INTERVAL_MS));
 
     return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
+      timersRef.current.forEach((timer) => window.clearTimeout(timer));
+      timersRef.current = [];
     };
   }, [taskId, onComplete]);
 
-  // Fallback step labels if API hasn't responded yet
-  const displaySteps =
-    steps.length > 0
-      ? steps
-      : [
-          { name: "data_ingestion", description: "Reading historical fragments...", status: "pending" },
-          { name: "embedding", description: "Creating semantic embeddings...", status: "pending" },
-          { name: "reduction", description: "Mapping memories into coordinates...", status: "pending" },
-          { name: "mapping", description: "Translating data into notes...", status: "pending" },
-          { name: "generation", description: "Generating the final soundscape...", status: "pending" },
-        ];
+  const displaySteps = steps.length > 0 ? steps : LOCAL_STEPS;
 
   return (
     <section className="processing-section animate-fade-in" id="processing-section">

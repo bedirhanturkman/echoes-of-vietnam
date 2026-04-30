@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function InterpretationPanel({ text, selectedEvent }) {
   const globalText = text ||
     "\u201CBu kompozisyon Vietnam Savaşı'na ait verilerden üretilmiştir. Haritadaki noktalar notalara, acılar ve barışlar melodinin ritmine dönüşüyor.\u201D";

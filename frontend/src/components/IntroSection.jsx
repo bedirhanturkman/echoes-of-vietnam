@@ -1,5 +1,3 @@
-import React from 'react';
-
 export default function IntroSection({ onBegin }) {
   return (
     <section className="intro-section animate-fade-in">

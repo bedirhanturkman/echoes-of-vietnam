@@ -1,7 +1,60 @@
-import React, { useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { UploadCloud } from 'lucide-react';
+import { mockEvents } from '../data/mockEvents';
 
-const API_BASE = '/api/v1/pipeline';
+const parseCsvLine = (line) => {
+  const values = [];
+  let current = "";
+  let inQuotes = false;
+
+  for (let i = 0; i < line.length; i += 1) {
+    const char = line[i];
+    const nextChar = line[i + 1];
+
+    if (char === '"' && nextChar === '"') {
+      current += '"';
+      i += 1;
+    } else if (char === '"') {
+      inQuotes = !inQuotes;
+    } else if (char === "," && !inQuotes) {
+      values.push(current.trim());
+      current = "";
+    } else {
+      current += char;
+    }
+  }
+
+  values.push(current.trim());
+  return values;
+};
+
+const parseCsv = (text) => {
+  const lines = text.trim().split(/\r?\n/).filter(Boolean);
+  if (lines.length < 2) return [];
+
+  const headers = parseCsvLine(lines[0]).map((header) => header.trim());
+  return lines.slice(1).map((line, index) => {
+    const values = parseCsvLine(line);
+    const row = { id: `e${index + 1}` };
+    headers.forEach((header, columnIndex) => {
+      row[header] = values[columnIndex] ?? "";
+    });
+    return row;
+  });
+};
+
+const parseDatasetFile = async (file) => {
+  const text = await file.text();
+
+  if (file.name.toLowerCase().endsWith(".json")) {
+    const json = JSON.parse(text);
+    if (Array.isArray(json)) return json;
+    if (Array.isArray(json.events)) return json.events;
+    throw new Error("JSON file must contain an array or an events array.");
+  }
+
+  return parseCsv(text);
+};
 
 export default function UploadSection({ onPipelineStart }) {
   const [isUploading, setIsUploading] = useState(false);
@@ -14,21 +67,9 @@ export default function UploadSection({ onPipelineStart }) {
     setError(null);
 
     try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch(`${API_BASE}/upload`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.detail || 'Upload failed');
-      }
-
-      const data = await response.json();
-      onPipelineStart(data.task_id);
+      const events = await parseDatasetFile(file);
+      if (!events.length) throw new Error("No events found in the selected file.");
+      onPipelineStart(events);
     } catch (err) {
       setError(err.message);
       setIsUploading(false);
@@ -38,23 +79,7 @@ export default function UploadSection({ onPipelineStart }) {
   const handleSampleSelect = async () => {
     setIsUploading(true);
     setError(null);
-
-    try {
-      const response = await fetch(`${API_BASE}/upload?use_sample=true`, {
-        method: 'POST',
-      });
-
-      if (!response.ok) {
-        const err = await response.json();
-        throw new Error(err.detail || 'Failed to start sample pipeline');
-      }
-
-      const data = await response.json();
-      onPipelineStart(data.task_id);
-    } catch (err) {
-      setError(err.message);
-      setIsUploading(false);
-    }
+    onPipelineStart(mockEvents);
   };
 
   const handleDrop = (e) => {

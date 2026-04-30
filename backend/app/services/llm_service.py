@@ -4,7 +4,6 @@ Uses Groq API (via httpx) to analyze the mapped musical data and generate text.
 """
 
 import json
-import httpx
 from app.config import settings
 
 class LLMService:
@@ -63,6 +62,8 @@ Return ONLY a valid JSON object in the following format (No Markdown, just raw J
 }}
 """
         try:
+            import httpx
+
             headers = {
                 "Authorization": f"Bearer {settings.GROQ_API_KEY}",
                 "Content-Type": "application/json"

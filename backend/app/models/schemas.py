@@ -83,12 +83,21 @@ class MusicMetadata(BaseModel):
     duration_seconds: float
 
 
+class PlaybackNote(BaseModel):
+    """Compact note data used by the frontend Web Audio player."""
+    pitch: int
+    velocity: int
+    start_time: float
+    duration: float
+
+
 class PipelineResultResponse(BaseModel):
     """Complete pipeline result — events + music metadata + download links."""
     task_id: str
     events: list[EventResult]
     music_metadata: MusicMetadata
     midi_url: str
+    playback_notes: list[PlaybackNote] = []
     interpretation_text: str
 
 

@@ -177,6 +177,16 @@ class PipelineOrchestrator:
                 duration_seconds=round(duration_seconds, 1),
             )
 
+            playback_notes = [
+                {
+                    "pitch": note.pitch,
+                    "velocity": note.velocity,
+                    "start_time": note.start_time,
+                    "duration": note.duration,
+                }
+                for note in mapping_result.notes
+            ]
+
             # Overall interpretation text (LLM generated)
             interpretation_text = global_interpretation if global_interpretation else (
                 f"This composition is generated from {len(events)} clustered Vietnam War records "
@@ -194,6 +204,7 @@ class PipelineOrchestrator:
                 events=events,
                 music_metadata=music_metadata,
                 midi_url=midi_url,
+                playback_notes=playback_notes,
                 interpretation_text=interpretation_text,
             )
 

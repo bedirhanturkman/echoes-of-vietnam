@@ -6,7 +6,6 @@ Generates text embeddings using Google Gemini API (google-genai) with prompt enr
 import hashlib
 import numpy as np
 from typing import Optional
-from google import genai
 
 from app.config import settings
 
@@ -17,6 +16,8 @@ class EmbeddingService:
         self._client = None
 
     def _get_client(self):
+        from google import genai
+
         if self._client is None:
             self._client = genai.Client(api_key=settings.GEMINI_API_KEY)
         return self._client

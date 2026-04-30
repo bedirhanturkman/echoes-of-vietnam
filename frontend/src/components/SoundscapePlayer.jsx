@@ -1,63 +1,60 @@
-import React, { useState } from 'react';
-import { Play, Pause, Download } from 'lucide-react';
+import { Download } from 'lucide-react';
+import { exportMidi } from '../utils/midiExport';
+import MoodSelector from './MoodSelector';
 
-export default function SoundscapePlayer({ musicMetadata, midiUrl }) {
-  const [isPlaying, setIsPlaying] = useState(false);
-
-  const togglePlay = () => setIsPlaying(!isPlaying);
-
-  const tempo = musicMetadata?.tempo_bpm || 72;
-  const scale = musicMetadata?.scale_name || "Pentatonic";
-  const chords = musicMetadata?.chord_progression || "G - D - Am7";
-  const mood = musicMetadata?.mood || "uncertain";
-  const totalNotes = musicMetadata?.total_notes || 0;
-  const durationSec = musicMetadata?.duration_seconds || 0;
+export default function SoundscapePlayer({
+  melody = null,
+  musicMetadata,
+  selectedMood,
+  onMoodChange,
+  isPreviewing,
+  onPreviewToggle,
+  onPreviewReset,
+}) {
+  const safeMelody = melody ?? [];
+  const durationSec = safeMelody.reduce(
+    (latest, note) => Math.max(latest, note.startTime + note.duration),
+    0
+  );
+  const totalNotes = safeMelody.length;
 
   const handleDownloadMidi = () => {
-    if (midiUrl) {
-      const link = document.createElement('a');
-      link.href = midiUrl;
-      link.download = midiUrl.split('/').pop();
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    }
+    exportMidi(safeMelody);
   };
 
   return (
     <div className="panel-card">
       <h3>Generated Soundscape</h3>
+      <MoodSelector selectedMood={selectedMood} onMoodChange={onMoodChange} />
       
-      <div className="player-controls">
-        <button className="play-btn" onClick={togglePlay}>
-          {isPlaying ? <Pause size={24} /> : <Play size={24} style={{ marginLeft: '4px' }} />}
-        </button>
-        <div className={`waveform ${isPlaying ? 'playing' : ''}`}>
+      <div className="player-controls decorative">
+        <div className="waveform">
           {Array.from({ length: 24 }).map((_, i) => (
             <div 
               key={i} 
               className="bar" 
-              style={{ animationDelay: `${i * 0.05}s` }}
+              style={{ height: `${18 + ((i * 17) % 70)}%` }}
             />
           ))}
         </div>
       </div>
+      <p className="silent-preview-label">Silent visual preview - download MIDI to listen.</p>
 
       <div className="music-stats">
         <div className="stat-box">
-          <div className="stat-value">{tempo} BPM</div>
+          <div className="stat-value">{musicMetadata?.tempo_bpm || 0} BPM</div>
           <div className="stat-label">Tempo</div>
         </div>
         <div className="stat-box">
-          <div className="stat-value">{scale}</div>
+          <div className="stat-value">{musicMetadata?.scale_name || "Pentatonic"}</div>
           <div className="stat-label">Scale</div>
         </div>
         <div className="stat-box">
-          <div className="stat-value">{chords}</div>
+          <div className="stat-value">{musicMetadata?.chord_progression || "Generated"}</div>
           <div className="stat-label">Progression</div>
         </div>
         <div className="stat-box">
-          <div className="stat-value" style={{ color: 'var(--muted)' }}>{mood}</div>
+          <div className="stat-value" style={{ color: 'var(--muted)' }}>{musicMetadata?.mood || "data-driven"}</div>
           <div className="stat-label">Mood</div>
         </div>
         <div className="stat-box">
@@ -65,17 +62,33 @@ export default function SoundscapePlayer({ musicMetadata, midiUrl }) {
           <div className="stat-label">Notes</div>
         </div>
         <div className="stat-box">
-          <div className="stat-value">{durationSec}s</div>
+          <div className="stat-value">{durationSec.toFixed(1)}s</div>
           <div className="stat-label">Duration</div>
         </div>
       </div>
 
       <div className="download-buttons">
+        <button
+          className="secondary-btn"
+          onClick={onPreviewToggle}
+          disabled={!safeMelody.length}
+          style={safeMelody.length ? { opacity: 1, cursor: 'pointer' } : {}}
+        >
+          {isPreviewing ? "Stop Preview" : "Preview Composition"}
+        </button>
+        <button
+          className="secondary-btn"
+          onClick={onPreviewReset}
+          disabled={!safeMelody.length}
+          style={safeMelody.length ? { opacity: 1, cursor: 'pointer' } : {}}
+        >
+          Reset Preview
+        </button>
         <button 
           className="secondary-btn" 
           onClick={handleDownloadMidi}
-          disabled={!midiUrl}
-          style={midiUrl ? { opacity: 1, cursor: 'pointer' } : {}}
+          disabled={!safeMelody.length}
+          style={safeMelody.length ? { opacity: 1, cursor: 'pointer' } : {}}
         >
           <Download size={16} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
           Download MIDI

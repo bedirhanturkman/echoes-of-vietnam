@@ -1,4 +1,3 @@
-import React from 'react';
 import { Database, BrainCircuit, Map, Music, Headphones } from 'lucide-react';
 
 export default function AboutSection() {
