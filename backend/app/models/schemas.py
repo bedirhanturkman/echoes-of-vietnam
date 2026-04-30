@@ -83,6 +83,12 @@ class MusicMetadata(BaseModel):
     duration_seconds: float
 
 
+class LyricLine(BaseModel):
+    """A single line of synchronized lyrics."""
+    start_beat: float
+    text: str
+
+
 class PipelineResultResponse(BaseModel):
     """Complete pipeline result — events + music metadata + download links."""
     task_id: str
@@ -90,6 +96,7 @@ class PipelineResultResponse(BaseModel):
     music_metadata: MusicMetadata
     midi_url: str
     interpretation_text: str
+    lyrics: Optional[list[LyricLine]] = None
 
 
 class HealthResponse(BaseModel):
