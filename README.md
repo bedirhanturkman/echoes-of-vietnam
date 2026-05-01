@@ -12,12 +12,17 @@ The project is inspired by the cultural threshold around 1973: the Vietnam War, 
 counterculture, farewell, transition, mortality, and legacy. The door metaphor comes from the
 idea of a historical threshold: a point where public memory knocks, waits, and becomes sound.
 
-The current conversation mode uses adaptive character routing as part of the artwork:
-"The system does not let the user choose who answers. The conversation itself summons the voice."
-The possible voices are Bob Dylan in 1973, a frontline soldier, a waiting mother, the user's
-future self, and the door itself. Groq first extracts sentiment, intensity, and theme; the router
-selects the voice; then Gemini translates the emotional state into music, visuals, and historical
-context.
+The current conversation mode can use adaptive character routing as part of the artwork:
+"The system can let the conversation itself summon the voice." The possible voices are Bob Dylan
+in 1973, a frontline soldier, a waiting mother, the user's future self, and the door itself.
+Groq first extracts sentiment, intensity, and theme; the router selects the voice; then Gemini
+translates the emotional state into music, visuals, and historical context.
+
+The visitor can also choose a voice manually. In Auto mode, Echo chooses from the emotional and
+thematic state of the exchange. In manual mode, the selected character answers every message until
+the visitor returns control to the threshold. Dialogue follows the chosen voice, music still
+responds to emotion and intensity, and the visual atmosphere keeps the selected character's color
+world.
 
 Rather than copying Bob Dylan's melodies, the system models broad 1970s folk harmony principles:
 simple I-IV-V progressions, acoustic phrasing, descending farewell motifs, and unresolved

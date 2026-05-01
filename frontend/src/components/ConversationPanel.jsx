@@ -22,6 +22,15 @@ const SENTIMENT_LABELS = {
   confusion: { label: 'confusion', color: '#d8bd73' },
 };
 
+const CHARACTER_OPTIONS = [
+  { value: 'auto', label: 'Auto / Echo chooses' },
+  { value: 'bob_dylan_1973', label: 'Bob Dylan 1973' },
+  { value: 'frontline_soldier', label: 'Frontline Soldier' },
+  { value: 'waiting_mother', label: 'Waiting Mother' },
+  { value: 'future_self', label: 'Future Self' },
+  { value: 'the_door', label: 'The Door' },
+];
+
 function TypewriterText({ text, speed = 28 }) {
   const [displayed, setDisplayed] = useState('');
   const indexRef = useRef(0);
@@ -52,6 +61,8 @@ export default function ConversationPanel({
   lastEmotion,
   turnCount,
   currentCharacter,
+  selectedCharacter,
+  onCharacterSelect,
 }) {
   const [input, setInput] = useState('');
   const bottomRef = useRef(null);
@@ -86,7 +97,23 @@ export default function ConversationPanel({
       <div className="conv-header">
         <div className="conv-title">
           <span className="conv-char-name">{currentCharacter?.name || 'Bob Dylan'}</span>
-          <span className="conv-char-year">summoned voice</span>
+          <span className="conv-char-year">
+            {selectedCharacter === 'auto' ? 'summoned voice' : 'chosen voice'}
+          </span>
+          <label className="character-selector">
+            <span>Who answers from behind the threshold?</span>
+            <select
+              value={selectedCharacter}
+              onChange={(e) => onCharacterSelect(e.target.value)}
+              disabled={isTyping}
+            >
+              {CHARACTER_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
         {lastEmotion && (
           <div className="conv-emotion-badge" style={{ color: sentInfo.color }}>

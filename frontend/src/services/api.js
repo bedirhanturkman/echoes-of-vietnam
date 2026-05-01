@@ -24,15 +24,17 @@ export const api = {
    * Send a message and receive full ThresholdResponse.
    * @param {string} sessionId
    * @param {string} message
+   * @param {string} selectedCharacter
    * @returns {Promise<ThresholdResponse>}
    */
-  async sendMessage(sessionId, message) {
+  async sendMessage(sessionId, message, selectedCharacter = 'auto') {
     const res = await fetch(`${BASE_URL}/conversation/message`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         session_id: sessionId,
         message,
+        selected_character: selectedCharacter,
       }),
     });
     if (!res.ok) throw new Error(`Message failed: ${res.status}`);

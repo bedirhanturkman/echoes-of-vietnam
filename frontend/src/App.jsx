@@ -21,6 +21,8 @@ export default function App() {
     turnCount,
     lastEmotion,
     currentCharacter,
+    selectedCharacter,
+    chooseCharacter,
     startSession,
     sendMessage,
     resetSession,
@@ -87,6 +89,8 @@ export default function App() {
                 lastEmotion={lastEmotion}
                 turnCount={turnCount}
                 currentCharacter={currentCharacter}
+                selectedCharacter={selectedCharacter}
+                onCharacterSelect={chooseCharacter}
               />
             </main>
 

@@ -341,6 +341,13 @@ html, body, #root {
   flex-shrink: 0;
 }
 
+.conv-title {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
+}
+
 .conv-char-name {
   font-family: var(--font-serif);
   font-size: 1.3rem;
@@ -352,10 +359,59 @@ html, body, #root {
 .conv-char-year {
   font-size: 0.8rem;
   color: var(--text-muted);
-  margin-left: 0.5rem;
   font-family: var(--font-sans);
   letter-spacing: 0.08em;
   text-transform: uppercase;
+}
+
+.character-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-top: 0.25rem;
+}
+
+.character-selector span {
+  font-family: var(--font-serif);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  font-style: italic;
+  letter-spacing: 0.04em;
+}
+
+.character-selector select {
+  width: min(260px, 48vw);
+  background: #10100e;
+  border: 1px solid var(--glass-border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  color-scheme: dark;
+  font-family: var(--font-serif);
+  font-size: 0.92rem;
+  padding: 0.48rem 2rem 0.48rem 0.7rem;
+  outline: none;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast);
+}
+
+.character-selector select:focus {
+  border-color: var(--accent);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.character-selector select:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.character-selector select option {
+  background: #10100e;
+  color: var(--text-primary);
+}
+
+.character-selector select option:checked {
+  background: var(--accent);
+  color: #fff;
 }
 
 .conv-emotion-badge {
