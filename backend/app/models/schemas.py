@@ -23,7 +23,7 @@ class MessageRequest(BaseModel):
 
 class EmotionAnalysis(BaseModel):
     """Output from Groq emotion analysis."""
-    sentiment: Literal["melancholy", "resistance", "hope", "neutral"]
+    sentiment: Literal["melancholy", "resistance", "hope", "neutral", "nostalgia", "rage", "peace", "anxiety"]
     intensity: float = Field(..., ge=0.0, le=1.0)
     theme_match: Literal["mortality", "farewell", "resistance", "longing", "transcendence"]
     character_response: str
