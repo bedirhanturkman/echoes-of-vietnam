@@ -1,9 +1,7 @@
 /**
- * App.jsx — The Echoing Threshold
- * Main application shell. Orchestrates all components.
+ * App.jsx - The Echoing Threshold application shell.
  */
 import './App.css';
-import { useEffect } from 'react';
 import { useConversation } from './hooks/useConversation';
 import AtmosphereCanvas from './components/AtmosphereCanvas';
 import ThresholdDoor from './components/ThresholdDoor';
@@ -22,6 +20,7 @@ export default function App() {
     historicalNote,
     turnCount,
     lastEmotion,
+    currentCharacter,
     startSession,
     sendMessage,
     resetSession,
@@ -29,18 +28,15 @@ export default function App() {
 
   return (
     <div className={`app-root palette-${visualParams.color_palette}`}>
-      {/* Layer 0: Animated atmosphere */}
       <AtmosphereCanvas visualParams={visualParams} />
 
-      {/* Layer 1: UI */}
       <div className="app-ui">
-        {/* ── INTRO PHASE ─────────────────────────────────── */}
         {(phase === 'intro' || phase === 'loading') && (
           <div className="intro-screen">
             <header className="intro-header">
               <h1 className="intro-title">The Echoing Threshold</h1>
               <p className="intro-subtitle">
-                A conversation with Bob Dylan, 1973 — Durango, Mexico
+                A conversation that summons the voice it needs
               </p>
               <p className="intro-tagline">
                 "Every man has a door he keeps half-open, half-closed."
@@ -69,10 +65,8 @@ export default function App() {
           </div>
         )}
 
-        {/* ── CONVERSATION PHASE ──────────────────────────── */}
         {phase === 'conversation' && (
           <div className="conversation-screen">
-            {/* Left: Door (compact, atmospheric) */}
             <div className="door-sidebar">
               <ThresholdDoor
                 doorState={visualParams.door_state}
@@ -81,11 +75,10 @@ export default function App() {
                 isIntro={false}
               />
               <button className="leave-btn" onClick={resetSession} title="Walk away">
-                ← leave
+                leave
               </button>
             </div>
 
-            {/* Center: Conversation */}
             <main className="conv-main">
               <ConversationPanel
                 messages={messages}
@@ -93,10 +86,10 @@ export default function App() {
                 onSend={sendMessage}
                 lastEmotion={lastEmotion}
                 turnCount={turnCount}
+                currentCharacter={currentCharacter}
               />
             </main>
 
-            {/* Right: Historical context */}
             <HistoricalContext
               note={historicalNote}
               musicParams={musicParams}
@@ -107,7 +100,6 @@ export default function App() {
         )}
       </div>
 
-      {/* Audio Engine (Persistent) */}
       <AudioEngine musicParams={musicParams} />
     </div>
   );

@@ -1,14 +1,25 @@
 /**
- * ConversationPanel — The Echoing Threshold
- * The chat interface: user input + character responses with typewriter effect.
+ * ConversationPanel - adaptive character chat interface.
  */
 import { useState, useEffect, useRef } from 'react';
 
 const SENTIMENT_LABELS = {
-  melancholy: { label: '◆ melancholy', color: '#4a7fa5' },
-  resistance: { label: '◆ resistance', color: '#c0392b' },
-  hope: { label: '◆ hope', color: '#d4a044' },
-  neutral: { label: '◆ drifting', color: '#888' },
+  melancholy: { label: 'melancholy', color: '#4a7fa5' },
+  resistance: { label: 'resistance', color: '#c0392b' },
+  hope: { label: 'hope', color: '#d4a044' },
+  neutral: { label: 'drifting', color: '#888' },
+  nostalgia: { label: 'nostalgia', color: '#d4a373' },
+  rage: { label: 'rage', color: '#d34a3a' },
+  peace: { label: 'peace', color: '#8ecae6' },
+  anxiety: { label: 'anxiety', color: '#7da86b' },
+  fear: { label: 'fear', color: '#7da86b' },
+  guilt: { label: 'guilt', color: '#8ea0b8' },
+  violence: { label: 'violence', color: '#c0392b' },
+  longing: { label: 'longing', color: '#c28d68' },
+  grief: { label: 'grief', color: '#6f8fb0' },
+  tenderness: { label: 'tenderness', color: '#d69b6a' },
+  silence: { label: 'silence', color: '#d8bd73' },
+  confusion: { label: 'confusion', color: '#d8bd73' },
 };
 
 function TypewriterText({ text, speed = 28 }) {
@@ -40,9 +51,9 @@ export default function ConversationPanel({
   onSend,
   lastEmotion,
   turnCount,
+  currentCharacter,
 }) {
   const [input, setInput] = useState('');
-  const [lastRenderedId, setLastRenderedId] = useState(null);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -68,14 +79,14 @@ export default function ConversationPanel({
   const sentiment = lastEmotion?.sentiment;
   const sentInfo = SENTIMENT_LABELS[sentiment] || SENTIMENT_LABELS.neutral;
   const intensity = lastEmotion?.intensity ?? 0;
+  const activeInitials = currentCharacter?.initials || 'BD';
 
   return (
     <div className="conversation-panel">
-      {/* Header */}
       <div className="conv-header">
         <div className="conv-title">
-          <span className="conv-char-name">Bob Dylan</span>
-          <span className="conv-char-year">• 1973</span>
+          <span className="conv-char-name">{currentCharacter?.name || 'Bob Dylan'}</span>
+          <span className="conv-char-year">summoned voice</span>
         </div>
         {lastEmotion && (
           <div className="conv-emotion-badge" style={{ color: sentInfo.color }}>
@@ -93,15 +104,22 @@ export default function ConversationPanel({
         )}
       </div>
 
-      {/* Messages */}
       <div className="conv-messages">
         {messages.map((msg, i) => {
+          if (msg.role === 'transition') {
+            return (
+              <div key={msg.id} className="voice-transition">
+                {msg.content}
+              </div>
+            );
+          }
+
           const isLatestChar = msg.role === 'character' && i === messages.length - 1;
           return (
             <div key={msg.id} className={`conv-message ${msg.role}`}>
               {msg.role === 'character' && (
-                <div className="char-avatar">
-                  <span>BD</span>
+                <div className="char-avatar" title={msg.characterName}>
+                  <span>{msg.initials || activeInitials}</span>
                 </div>
               )}
               <div className="msg-bubble">
@@ -110,8 +128,11 @@ export default function ConversationPanel({
                 ) : (
                   <span>{msg.content}</span>
                 )}
+                {msg.characterName && (
+                  <span className="msg-character">{msg.characterName}</span>
+                )}
                 {msg.emotion?.theme_match && (
-                  <span className="msg-theme">— {msg.emotion.theme_match}</span>
+                  <span className="msg-theme">{msg.emotion.theme_match}</span>
                 )}
               </div>
             </div>
@@ -120,7 +141,7 @@ export default function ConversationPanel({
 
         {isTyping && (
           <div className="conv-message character typing">
-            <div className="char-avatar"><span>BD</span></div>
+            <div className="char-avatar"><span>{activeInitials}</span></div>
             <div className="msg-bubble typing-indicator">
               <span /><span /><span />
             </div>
@@ -130,7 +151,6 @@ export default function ConversationPanel({
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
       <div className="conv-input-area">
         <textarea
           ref={inputRef}
@@ -146,6 +166,7 @@ export default function ConversationPanel({
           className="conv-send-btn"
           onClick={handleSend}
           disabled={isTyping || !input.trim()}
+          aria-label="Send message"
         >
           <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />

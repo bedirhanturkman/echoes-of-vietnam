@@ -2,7 +2,7 @@
  * useConversation — The Echoing Threshold
  * Core hook managing session state, message flow, and atmospheric params.
  */
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback } from 'react';
 import { api } from '../services/api';
 
 const INITIAL_VISUAL = {
@@ -23,6 +23,20 @@ const INITIAL_MUSIC = {
   cross_fade_seconds: 3.0,
 };
 
+const CHARACTER_INITIALS = {
+  bob_dylan_1973: 'BD',
+  frontline_soldier: 'FS',
+  waiting_mother: 'WM',
+  future_self: 'YF',
+  the_door: 'DR',
+};
+
+const DEFAULT_CHARACTER = {
+  id: 'bob_dylan_1973',
+  name: 'Bob Dylan',
+  initials: 'BD',
+};
+
 export function useConversation() {
   const [phase, setPhase] = useState('intro'); // intro | loading | conversation
   const [sessionId, setSessionId] = useState(null);
@@ -34,8 +48,7 @@ export function useConversation() {
   const [historicalNote, setHistoricalNote] = useState(null);
   const [turnCount, setTurnCount] = useState(0);
   const [lastEmotion, setLastEmotion] = useState(null);
-  const character = 'bob_dylan_1973';
-  const abortRef = useRef(null);
+  const [currentCharacter, setCurrentCharacter] = useState(DEFAULT_CHARACTER);
 
   /**
    * Initialize session — user knocked on the door.
@@ -44,17 +57,25 @@ export function useConversation() {
     setPhase('loading');
     setError(null);
     try {
-      const data = await api.startSession(character);
+      const data = await api.startSession();
+      const characterInfo = {
+        id: data.character_id,
+        name: data.character_name,
+        initials: CHARACTER_INITIALS[data.character_id] || '??',
+      };
       setSessionId(data.session_id);
       setVisualParams(data.initial_visual);
       setMusicParams(data.initial_music);
+      setCurrentCharacter(characterInfo);
 
-      // Add Dylan's greeting as first message
       setMessages([
         {
           id: 'greeting',
           role: 'character',
           content: data.greeting,
+          characterId: characterInfo.id,
+          characterName: characterInfo.name,
+          initials: characterInfo.initials,
           emotion: null,
           timestamp: Date.now(),
         },
@@ -64,7 +85,7 @@ export function useConversation() {
       setError('Could not reach the threshold. Is the server running?');
       setPhase('intro');
     }
-  }, [character]);
+  }, []);
 
   /**
    * Send user message through the pipeline.
@@ -85,31 +106,51 @@ export function useConversation() {
       setError(null);
 
       try {
-        const data = await api.sendMessage(sessionId, userText, character);
+        const previousCharacterId = currentCharacter.id;
+        const data = await api.sendMessage(sessionId, userText);
+        const characterInfo = {
+          id: data.character_id,
+          name: data.character_name,
+          initials: CHARACTER_INITIALS[data.character_id] || '??',
+        };
 
-        // Update atmosphere
         setVisualParams(data.visual_params);
         setMusicParams(data.music_params);
         setHistoricalNote(data.historical_note);
         setTurnCount(data.turn_count);
         setLastEmotion(data.emotion);
+        setCurrentCharacter(characterInfo);
 
-        // Add character response
         const charMsg = {
           id: `char-${Date.now()}`,
           role: 'character',
-          content: data.emotion.character_response,
+          content: data.character_response || data.emotion.character_response,
+          characterId: characterInfo.id,
+          characterName: characterInfo.name,
+          initials: characterInfo.initials,
           emotion: data.emotion,
           timestamp: Date.now(),
         };
-        setMessages((prev) => [...prev, charMsg]);
+        setMessages((prev) => {
+          const next = [...prev];
+          if (data.turn_count > 1 && data.character_id !== previousCharacterId) {
+            next.push({
+              id: `transition-${Date.now()}`,
+              role: 'transition',
+              content: 'Another voice answers from behind the threshold.',
+              timestamp: Date.now(),
+            });
+          }
+          next.push(charMsg);
+          return next;
+        });
       } catch (err) {
         setError('The signal was lost... try again.');
       } finally {
         setIsTyping(false);
       }
     },
-    [sessionId, isTyping, character]
+    [sessionId, isTyping, currentCharacter.id]
   );
 
   /**
@@ -126,6 +167,7 @@ export function useConversation() {
     setHistoricalNote(null);
     setTurnCount(0);
     setLastEmotion(null);
+    setCurrentCharacter(DEFAULT_CHARACTER);
   }, []);
 
   return {
@@ -139,6 +181,7 @@ export function useConversation() {
     historicalNote,
     turnCount,
     lastEmotion,
+    currentCharacter,
     startSession,
     sendMessage,
     resetSession,

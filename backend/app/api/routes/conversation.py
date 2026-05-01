@@ -32,11 +32,11 @@ async def start_session(
     manager: EmotionManager = Depends(get_manager),
 ) -> StartSessionResponse:
     """
-    Initializes a new conversation session with the chosen character.
+    Initializes a new adaptive conversation session.
     Returns session_id, character greeting, and initial visual/music params.
     """
-    session_id = manager.create_session(request.character)
-    return manager.get_start_response(session_id, request.character)
+    session_id = manager.create_session()
+    return manager.get_start_response(session_id)
 
 
 @router.post("/message", response_model=ThresholdResponse, summary="Send a message and get atmospheric response")
@@ -70,7 +70,8 @@ async def get_session(
         raise HTTPException(status_code=404, detail="Session not found")
     return {
         "session_id": session_id,
-        "character": session["character"],
+        "current_character": session["current_character"],
+        "character_history": session["character_history"],
         "turn_count": session["turn_count"],
         "created_at": session["created_at"],
         "last_emotion": session["last_emotion"],

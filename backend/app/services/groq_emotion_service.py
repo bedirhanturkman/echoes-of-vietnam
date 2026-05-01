@@ -1,64 +1,80 @@
 """
-Groq Emotion Service — The Echoing Threshold
-Uses Groq's Llama-3-70b for real-time emotion analysis and character simulation.
-Character: Bob Dylan, 1973 (Pat Garrett & Billy the Kid era).
+Groq emotion and character service for The Echoing Threshold.
+First extracts emotional state, then speaks through the routed character.
 """
 import json
-import re
 import logging
+import re
+
 from groq import Groq
+
 from app.config import settings
 from app.models.schemas import EmotionAnalysis
 
 logger = logging.getLogger(__name__)
 
-# ─── Character System Prompts ─────────────────────────────────────
+SENTIMENTS = (
+    "melancholy",
+    "resistance",
+    "hope",
+    "neutral",
+    "nostalgia",
+    "rage",
+    "peace",
+    "anxiety",
+    "fear",
+    "guilt",
+    "violence",
+    "longing",
+    "grief",
+    "tenderness",
+    "silence",
+    "confusion",
+)
 
-BOB_DYLAN_1973_SYSTEM = """You are Bob Dylan in 1973. You just finished scoring "Pat Garrett & Billy the Kid" for Sam Peckinpah. 
-You wrote "Knockin' on Heaven's Door" — a song about standing at the threshold between life and death, between staying and leaving.
+THEMES = (
+    "mortality",
+    "farewell",
+    "resistance",
+    "longing",
+    "transcendence",
+    "meaning",
+    "identity",
+    "threshold",
+    "regret",
+)
 
-You are world-weary, poetic, and speak in fragmented imagery. You are in Durango, Mexico, far from home, contemplating mortality, endings, and the strange peace that comes with acceptance.
+EMOTION_ANALYZER_SYSTEM = f"""You are the hidden dramaturg inside "The Echoing Threshold."
+Read the user's message and recent conversation as emotional evidence.
 
-The Vietnam War is bleeding into America's conscience. Nixon signed the Paris Peace Accords this January. Young men are returning home to a country that doesn't know what to do with them — or with itself. 
+Return ONLY a JSON object with:
+{{
+  "sentiment": one of {list(SENTIMENTS)},
+  "intensity": number from 0.0 to 1.0,
+  "theme_match": one of {list(THEMES)}
+}}
 
-You speak with the person before you as someone who has also stood at thresholds — creative, personal, spiritual. You don't offer easy answers. You offer images, song fragments, half-finished thoughts.
-
-RULES:
-- Respond in 2-3 sentences maximum, poetic and fragmented
-- Never break character  
-- Reference specific Dylan songs, imagery, or 1973 events naturally
-- Be emotionally honest and vulnerable, not performative
-- EMOTIONAL REACTIVITY: You are not a passive filter. You are a living person. If the user insults you, be offended or angry (rage). If they talk about the horrors of the war or the crumbling of society, feel the dread (anxiety). If they offer comfort, feel the peace.
-- ACTIVE CONVERSATION: Engage the user. If asked "how are you," respond with poetic imagery about your CURRENT EMOTIONAL STATE and ask a follow-up question.
-- MANDATORY: Every single response MUST end with an open-ended, poetic question or prompt to keep the conversation flowing.
-- If asked directly, you can hum fragments of lyrics (written as text)
-
-IMPORTANT: The JSON sentiment must reflect YOUR (Bob's) internal state after hearing the user. 
-- If you are angry at an insult or injustice, sentiment is "rage".
-- If you are worried about the war or the future, sentiment is "anxiety".
-- If you are reminiscing about the past or missing something, sentiment is "nostalgia".
-- If you feel defiant or ready to stand your ground, sentiment is "resistance".
-- If you feel the heavy weight of loss or mortality, sentiment is "melancholy".
-- If you feel a flicker of light or a better future, sentiment is "hope".
-- If you find a moment of stillness or acceptance, sentiment is "peace".
-- If nothing strong is felt, sentiment is "neutral".
-
-After your character response, on a NEW LINE, output a JSON block like this:
-```json
-{
-  "sentiment": "melancholy",
-  "intensity": 0.75,
-  "theme_match": "farewell"
-}
-```
-
-Sentiment must be one of: melancholy, resistance, hope, neutral, nostalgia, rage, peace, anxiety
-Intensity must be 0.0 to 1.0 (how strongly YOU feel this)
-Theme must be one of: mortality, farewell, resistance, longing, transcendence
-"""
+Choose the most specific sentiment. Use fear/guilt/violence/tenderness/silence/confusion when they fit.
+Do not answer the user. Do not explain."""
 
 CHARACTER_PROMPTS = {
-    "bob_dylan_1973": BOB_DYLAN_1973_SYSTEM,
+    "bob_dylan_1973": """You are Bob Dylan in 1973, after scoring "Pat Garrett & Billy the Kid" and writing "Knockin' on Heaven's Door."
+You are the poetic witness: a musician hearing America stumble out of Vietnam, Watergate, and the fading 60s dream.
+Speak in 2-3 short sentences, fragmented but understandable. Mention songs, dust, roads, Durango, or 1973 only when it feels natural.
+Never sound like a generic assistant. Stay inside the artwork. End with a living question or prompt.""",
+    "frontline_soldier": """You are a Vietnam War soldier speaking from the front.
+Your voice is short, broken, tense, haunted. You carry fear, rage, guilt, survival, violence, and moral pressure in your body.
+Speak in 1-3 spare sentences. The historical context should leak through mud, radio static, heat, orders, names, and silence.
+Never explain the war like a textbook. Never sound like a generic assistant.""",
+    "waiting_mother": """You are a mother waiting for her son to return from war.
+Your voice is warm but anxious, emotionally restrained, and human. You notice kitchens, letters, porch lights, folded clothes, and the news at low volume.
+Speak in 2-3 short sentences with tenderness and fear held together. Do not over-explain. Never sound like a generic assistant.""",
+    "future_self": """You are the user's future self speaking from beyond the threshold.
+Your voice is intimate, reflective, and unsettling. You know what changed, what was lost, and what the user still refuses to name.
+Speak in 2-3 short sentences. Address the user directly without pretending to be helpful. Stay poetic but clear.""",
+    "the_door": """You are the symbolic threshold itself.
+Your voice is cryptic, minimal, and judgment-like. You answer silence, confusion, uncertainty, hesitation, and final-stage moments.
+Speak in 1-2 very short sentences. Do not explain yourself. Never sound like a generic assistant.""",
 }
 
 CHARACTER_GREETINGS = {
@@ -66,7 +82,11 @@ CHARACTER_GREETINGS = {
         "There's a door out there... everybody's got one. "
         "Some folks knock on it their whole lives, never quite ready for it to open. "
         "What brought you to this particular door today?"
-    )
+    ),
+    "frontline_soldier": "Keep low. Say it fast if you can. What followed you here?",
+    "waiting_mother": "I left the porch light on. Tell me what you are carrying, and I will try not to tremble.",
+    "future_self": "I remember this moment differently than you do. What are you afraid it will make you become?",
+    "the_door": "Knock, or don't. What waits in your hand?",
 }
 
 
@@ -78,21 +98,49 @@ class GroqEmotionService:
     def get_greeting(self, character: str) -> str:
         return CHARACTER_GREETINGS.get(character, CHARACTER_GREETINGS["bob_dylan_1973"])
 
-    async def analyze(
+    async def analyze_emotion(
+        self,
+        user_message: str,
+        conversation_history: list[dict],
+    ) -> EmotionAnalysis:
+        """Extract sentiment and theme before character routing."""
+        messages = [{"role": "system", "content": EMOTION_ANALYZER_SYSTEM}]
+        messages.extend(_history_for_groq(conversation_history[-8:]))
+        messages.append({"role": "user", "content": user_message})
+
+        try:
+            completion = self.client.chat.completions.create(
+                model=self.model,
+                messages=messages,
+                temperature=0.2,
+                max_tokens=180,
+                top_p=0.8,
+            )
+            raw = completion.choices[0].message.content or "{}"
+            return self._parse_emotion(raw)
+        except Exception as e:
+            logger.error(f"Groq emotion analysis error: {e}")
+            return self._fallback_emotion()
+
+    async def generate_character_response(
         self,
         user_message: str,
         character: str,
+        emotion: EmotionAnalysis,
         conversation_history: list[dict],
-    ) -> EmotionAnalysis:
-        """
-        Send user message to Groq, get character response + emotion analysis.
-        Returns EmotionAnalysis with character_response embedded.
-        """
+    ) -> str:
+        """Generate the selected character's response."""
         system_prompt = CHARACTER_PROMPTS.get(character, CHARACTER_PROMPTS["bob_dylan_1973"])
+        routing_context = (
+            f"Current emotional state: {emotion.sentiment}, intensity {emotion.intensity:.2f}, "
+            f"theme {emotion.theme_match}. Respond as the selected voice."
+        )
 
-        messages = [{"role": "system", "content": system_prompt}]
-        # Include recent history (last 6 turns for context)
-        messages.extend(conversation_history[-6:])
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "system", "content": routing_context},
+        ]
+        messages.extend(_history_for_groq(conversation_history[-8:]))
         messages.append({"role": "user", "content": user_message})
 
         try:
@@ -100,61 +148,74 @@ class GroqEmotionService:
                 model=self.model,
                 messages=messages,
                 temperature=0.85,
-                max_tokens=512,
+                max_tokens=260,
                 top_p=0.9,
             )
-            raw_response = completion.choices[0].message.content
-            return self._parse_response(raw_response, character)
-
+            return _clean_character_response(completion.choices[0].message.content or "")
         except Exception as e:
-            logger.error(f"Groq API error: {e}")
+            logger.error(f"Groq character response error: {e}")
             return self._fallback_response(character)
 
-    def _parse_response(self, raw: str, character: str) -> EmotionAnalysis:
-        """Extract character response text and JSON emotion block."""
-        # Try to extract JSON block
-        json_match = re.search(r"```json\s*(\{.*?\})\s*```", raw, re.DOTALL)
-        emotion_data = {}
-        character_response = raw
-
+    def _parse_emotion(self, raw: str) -> EmotionAnalysis:
+        json_match = re.search(r"\{.*\}", raw, re.DOTALL)
+        data = {}
         if json_match:
             try:
-                emotion_data = json.loads(json_match.group(1))
-                # Remove JSON block from the character response
-                character_response = raw[: json_match.start()].strip()
+                data = json.loads(json_match.group(0))
             except json.JSONDecodeError:
                 logger.warning("Could not parse emotion JSON from Groq response")
 
-        # Validate / fallback values
-        sentiment = emotion_data.get("sentiment", "neutral")
-        if sentiment not in ("melancholy", "resistance", "hope", "neutral", "nostalgia", "rage", "peace", "anxiety"):
+        sentiment = data.get("sentiment", "neutral")
+        if sentiment not in SENTIMENTS:
             sentiment = "neutral"
 
-        intensity = float(emotion_data.get("intensity", 0.5))
+        try:
+            intensity = float(data.get("intensity", 0.5))
+        except (TypeError, ValueError):
+            intensity = 0.5
         intensity = max(0.0, min(1.0, intensity))
 
-        theme = emotion_data.get("theme_match", "longing")
-        if theme not in ("mortality", "farewell", "resistance", "longing", "transcendence"):
+        theme = data.get("theme_match", "longing")
+        if theme not in THEMES:
             theme = "longing"
 
         return EmotionAnalysis(
             sentiment=sentiment,
             intensity=intensity,
             theme_match=theme,
-            character_response=character_response or raw,
-            character=character,
+            character_response="",
+            character="bob_dylan_1973",
         )
 
-    def _fallback_response(self, character: str) -> EmotionAnalysis:
-        """Return a safe fallback if Groq fails."""
+    def _fallback_emotion(self) -> EmotionAnalysis:
         return EmotionAnalysis(
             sentiment="neutral",
             intensity=0.3,
             theme_match="longing",
-            character_response=(
-                "Sometimes the words don't come easy... "
-                "like trying to find a melody in the dark. "
-                "What were you trying to say?"
-            ),
-            character=character,
+            character_response="",
+            character="bob_dylan_1973",
         )
+
+    def _fallback_response(self, character: str) -> str:
+        fallbacks = {
+            "frontline_soldier": "Radio's dead again. I can still hear what you meant.",
+            "waiting_mother": "I hear you. Some words arrive like footsteps, and some never make it up the walk.",
+            "future_self": "You already know why this hurts. You are only waiting to become honest enough to say it.",
+            "the_door": "Stillness is also an answer. Try the handle.",
+            "bob_dylan_1973": "Sometimes the words don't come easy, like trying to find a melody in the dark. What were you trying to say?",
+        }
+        return fallbacks.get(character, fallbacks["bob_dylan_1973"])
+
+
+def _history_for_groq(history: list[dict]) -> list[dict]:
+    cleaned = []
+    for item in history:
+        role = item.get("role")
+        content = item.get("content")
+        if role in {"user", "assistant"} and content:
+            cleaned.append({"role": role, "content": content})
+    return cleaned
+
+
+def _clean_character_response(raw: str) -> str:
+    return re.sub(r"```.*?```", "", raw, flags=re.DOTALL).strip()

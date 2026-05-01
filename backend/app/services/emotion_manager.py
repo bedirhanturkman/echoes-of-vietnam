@@ -1,109 +1,139 @@
 """
-Emotion Manager — The Echoing Threshold
-Main orchestrator: routes user messages through Groq → Gemini pipeline.
-Maintains session state and conversation history.
+Emotion Manager for The Echoing Threshold.
+Routes each turn through emotion analysis, adaptive character selection, and atmosphere generation.
 """
-import uuid
 import logging
+import uuid
 from datetime import datetime
-from app.services.groq_emotion_service import GroqEmotionService
+
+from app.models.schemas import EmotionAnalysis, StartSessionResponse, ThresholdResponse
+from app.services.character_router import get_character_name, select_character
 from app.services.gemini_context_service import GeminiContextService
-from app.models.schemas import (
-    ThresholdResponse,
-    StartSessionResponse,
-    EmotionAnalysis,
-)
+from app.services.groq_emotion_service import GroqEmotionService
 
 logger = logging.getLogger(__name__)
 
-# ─── In-memory session store ──────────────────────────────────────
-# In production this would be Redis; for this installation, memory is fine.
 _sessions: dict[str, dict] = {}
+
+CHARACTER_PALETTES = {
+    "bob_dylan_1973": "sepia_glow",
+    "frontline_soldier": "deep_red",
+    "waiting_mother": "warm_amber",
+    "future_self": "cold_violet",
+    "the_door": "threshold_gold",
+}
 
 
 class EmotionManager:
     """
-    Orchestrates the Groq → Gemini pipeline.
-    Single instance (singleton pattern via FastAPI dependency injection).
+    Orchestrates the adaptive Groq -> router -> Groq -> Gemini pipeline.
+    Single instance via FastAPI dependency injection.
     """
 
     def __init__(self):
         self.groq = GroqEmotionService()
         self.gemini = GeminiContextService()
 
-    # ── Session Management ─────────────────────────────────────────
-
-    def create_session(self, character: str) -> str:
+    def create_session(self) -> str:
         session_id = str(uuid.uuid4())
         _sessions[session_id] = {
-            "character": character,
-            "history": [],          # list of {role, content} for Groq context
+            "current_character": "bob_dylan_1973",
+            "character_history": ["bob_dylan_1973"],
+            "history": [],
             "turn_count": 0,
             "created_at": datetime.utcnow().isoformat(),
             "last_emotion": None,
         }
-        logger.info(f"Session created: {session_id} | character: {character}")
+        logger.info(f"Session created: {session_id}")
         return session_id
 
     def get_session(self, session_id: str) -> dict | None:
         return _sessions.get(session_id)
 
-    def get_start_response(self, session_id: str, character: str) -> StartSessionResponse:
+    def get_start_response(self, session_id: str) -> StartSessionResponse:
+        character = "bob_dylan_1973"
         greeting = self.groq.get_greeting(character)
         music, visual = self.gemini.get_initial_params()
+        visual.color_palette = CHARACTER_PALETTES[character]
         return StartSessionResponse(
             session_id=session_id,
-            character=character,
+            character_id=character,
+            character_name=get_character_name(character),
             greeting=greeting,
             initial_visual=visual,
             initial_music=music,
         )
 
-    # ── Main Pipeline ──────────────────────────────────────────────
-
-    async def process_message(
-        self, session_id: str, user_message: str
-    ) -> ThresholdResponse:
+    async def process_message(self, session_id: str, user_message: str) -> ThresholdResponse:
         """
         Full pipeline for one conversation turn:
-        1. Groq: emotion analysis + character response
-        2. Gemini: music + visual parameters
-        3. Return unified ThresholdResponse
+        1. Groq extracts emotion and theme.
+        2. Router selects the character summoned by the conversation.
+        3. Groq generates that character's response.
+        4. Gemini generates music and visual parameters.
         """
         session = _sessions.get(session_id)
         if not session:
             raise ValueError(f"Session not found: {session_id}")
 
-        character = session["character"]
         history = session["history"]
-        turn = session["turn_count"] + 1
+        previous_turn_count = session["turn_count"]
+        turn = previous_turn_count + 1
 
-        # ── Step 1: Groq Analysis ──────────────────────────────────
-        emotion: EmotionAnalysis = await self.groq.analyze(
+        emotion: EmotionAnalysis = await self.groq.analyze_emotion(
             user_message=user_message,
-            character=character,
             conversation_history=history,
         )
 
-        # ── Step 2: Gemini Enrichment ──────────────────────────────
+        character = select_character(
+            sentiment=emotion.sentiment,
+            intensity=emotion.intensity,
+            theme_match=emotion.theme_match,
+            message=user_message,
+            history=history,
+            turn_count=previous_turn_count,
+        )
+
+        character_response = await self.groq.generate_character_response(
+            user_message=user_message,
+            character=character,
+            emotion=emotion,
+            conversation_history=history,
+        )
+        emotion.character = character
+        emotion.character_response = character_response
+
         music_params, visual_params, historical_note = await self.gemini.enrich(
             emotion=emotion,
             user_message=user_message,
             turn_count=turn,
         )
+        visual_params.color_palette = CHARACTER_PALETTES.get(character, visual_params.color_palette)
 
-        # ── Step 3: Update Session ─────────────────────────────────
         history.append({"role": "user", "content": user_message})
-        history.append({"role": "assistant", "content": emotion.character_response})
+        history.append(
+            {
+                "role": "assistant",
+                "content": character_response,
+                "character_id": character,
+                "character_name": get_character_name(character),
+            }
+        )
         session["turn_count"] = turn
         session["last_emotion"] = emotion.sentiment
+        session["current_character"] = character
+        session["character_history"].append(character)
 
-        # Keep history manageable (last 20 messages)
         if len(history) > 20:
             session["history"] = history[-20:]
+        if len(session["character_history"]) > 20:
+            session["character_history"] = session["character_history"][-20:]
 
         return ThresholdResponse(
             session_id=session_id,
+            character_id=character,
+            character_name=get_character_name(character),
+            character_response=character_response,
             emotion=emotion,
             music_params=music_params,
             visual_params=visual_params,

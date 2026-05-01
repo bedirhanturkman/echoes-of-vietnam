@@ -60,6 +60,50 @@
   --text-secondary: #c0a060;
 }
 
+.palette-deep_red {
+  --sky-top: #090404;
+  --sky-mid: #230606;
+  --accent: #b6322c;
+  --accent-light: #e06658;
+  --glass-bg: rgba(12, 4, 4, 0.78);
+  --glass-border: rgba(182, 50, 44, 0.24);
+  --text-primary: #ead8cf;
+  --text-secondary: #c89186;
+}
+
+.palette-sepia_glow {
+  --sky-top: #120d08;
+  --sky-mid: #2b2118;
+  --accent: #b78354;
+  --accent-light: #d4a373;
+  --glass-bg: rgba(18, 13, 8, 0.74);
+  --glass-border: rgba(183, 131, 84, 0.2);
+  --text-primary: #eadfce;
+  --text-secondary: #bca489;
+}
+
+.palette-cold_violet {
+  --sky-top: #060817;
+  --sky-mid: #141735;
+  --accent: #7d78c9;
+  --accent-light: #a7b7ff;
+  --glass-bg: rgba(8, 10, 24, 0.78);
+  --glass-border: rgba(125, 120, 201, 0.22);
+  --text-primary: #e2e6ff;
+  --text-secondary: #a9b2d8;
+}
+
+.palette-threshold_gold {
+  --sky-top: #010101;
+  --sky-mid: #070604;
+  --accent: #d8bd73;
+  --accent-light: #f0d98a;
+  --glass-bg: rgba(2, 2, 2, 0.82);
+  --glass-border: rgba(216, 189, 115, 0.24);
+  --text-primary: #f3ead0;
+  --text-secondary: #b9a96f;
+}
+
 /* ── Reset ──────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -310,6 +354,8 @@ html, body, #root {
   color: var(--text-muted);
   margin-left: 0.5rem;
   font-family: var(--font-sans);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .conv-emotion-badge {
@@ -423,6 +469,31 @@ html, body, #root {
   margin-top: 0.6rem;
   font-style: italic;
   letter-spacing: 0.1em;
+}
+
+.msg-character {
+  display: block;
+  font-size: 0.68rem;
+  color: var(--accent-light);
+  margin-top: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-family: var(--font-sans);
+}
+
+.voice-transition {
+  align-self: center;
+  max-width: 80%;
+  padding: 0.55rem 1rem;
+  border-top: 1px solid var(--glass-border);
+  border-bottom: 1px solid var(--glass-border);
+  color: var(--text-muted);
+  font-family: var(--font-serif);
+  font-size: 0.82rem;
+  font-style: italic;
+  letter-spacing: 0.04em;
+  text-align: center;
+  animation: fadeIn 0.9s ease;
 }
 
 .cursor-blink {

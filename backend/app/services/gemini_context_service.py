@@ -45,13 +45,13 @@ You MUST respond ONLY with a valid JSON object. No markdown, no explanation. Exa
     "key": <string, one of: "Am", "Em", "G", "C", "Dm">,
     "instrument_layer": <string, one of: "piano", "harmonika", "ambient_only">,
     "rhythm_type": <string, one of: "steady", "arpeggio", "syncopated">,
-    "chord_progression_type": <string, one of: "melancholy", "hope", "resistance", "neutral", "nostalgia", "rage", "peace", "anxiety">,
+    "chord_progression_type": <string, one of: "melancholy", "hope", "resistance", "neutral", "nostalgia", "rage", "peace", "anxiety", "fear", "guilt", "violence", "longing", "grief", "tenderness", "silence", "confusion">,
     "reverb_intensity": <float 0.0-1.0>,
     "historical_soundscape": <string, one of: "radio_static", "crowd_protest", "silence">,
     "cross_fade_seconds": <float 1.0-3.0>
   },
   "visual_params": {
-    "color_palette": <string, one of: "blue_grey", "warm_amber", "stormy_dark", "golden_dusk", "deep_red", "ethereal_white", "sickly_green", "sepia_glow">,
+    "color_palette": <string, one of: "blue_grey", "warm_amber", "stormy_dark", "golden_dusk", "deep_red", "ethereal_white", "sickly_green", "sepia_glow", "cold_violet", "threshold_gold">,
     "cloud_density": <float 0.0-1.0>,
     "door_state": <string, one of: "closed", "ajar", "open">,
     "particle_intensity": <float 0.0-1.0>
@@ -164,6 +164,17 @@ SENTIMENT_FALLBACKS = {
     },
 }
 
+SENTIMENT_FALLBACKS.update({
+    "fear": SENTIMENT_FALLBACKS["anxiety"],
+    "guilt": SENTIMENT_FALLBACKS["melancholy"],
+    "violence": SENTIMENT_FALLBACKS["rage"],
+    "longing": SENTIMENT_FALLBACKS["nostalgia"],
+    "grief": SENTIMENT_FALLBACKS["melancholy"],
+    "tenderness": SENTIMENT_FALLBACKS["peace"],
+    "silence": SENTIMENT_FALLBACKS["neutral"],
+    "confusion": SENTIMENT_FALLBACKS["neutral"],
+})
+
 
 class GeminiContextService:
     def __init__(self):
@@ -205,7 +216,7 @@ Conversation turn #{turn}
 User said: "{user_message}"
 Detected sentiment: {emotion.sentiment} (intensity: {emotion.intensity:.2f})
 Theme: {emotion.theme_match}
-Character (Bob Dylan 1973) responded: "{emotion.character_response[:200]}..."
+Selected character ({emotion.character}) responded: "{emotion.character_response[:200]}..."
 
 Generate the atmospheric parameters for this emotional moment.
 The intensity is {emotion.intensity:.2f} — higher intensity means more dramatic visual/audio response.
@@ -236,9 +247,9 @@ The intensity is {emotion.intensity:.2f} — higher intensity means more dramati
     def _fallback(self, sentiment: str) -> tuple[MusicParams, VisualParams, HistoricalNote | None]:
         """Static fallback mapping when Gemini is unavailable."""
         fb = SENTIMENT_FALLBACKS.get(sentiment, SENTIMENT_FALLBACKS["neutral"])
-        return fb["music_params"], fb["visual_params"], None
+        return fb["music_params"].model_copy(), fb["visual_params"].model_copy(), None
 
     def get_initial_params(self) -> tuple[MusicParams, VisualParams]:
         """Initial atmospheric params before any conversation."""
         fb = SENTIMENT_FALLBACKS["neutral"]
-        return fb["music_params"], fb["visual_params"]
+        return fb["music_params"].model_copy(), fb["visual_params"].model_copy()

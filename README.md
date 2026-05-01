@@ -12,6 +12,13 @@ The project is inspired by the cultural threshold around 1973: the Vietnam War, 
 counterculture, farewell, transition, mortality, and legacy. The door metaphor comes from the
 idea of a historical threshold: a point where public memory knocks, waits, and becomes sound.
 
+The current conversation mode uses adaptive character routing as part of the artwork:
+"The system does not let the user choose who answers. The conversation itself summons the voice."
+The possible voices are Bob Dylan in 1973, a frontline soldier, a waiting mother, the user's
+future self, and the door itself. Groq first extracts sentiment, intensity, and theme; the router
+selects the voice; then Gemini translates the emotional state into music, visuals, and historical
+context.
+
 Rather than copying Bob Dylan's melodies, the system models broad 1970s folk harmony principles:
 simple I-IV-V progressions, acoustic phrasing, descending farewell motifs, and unresolved
 transitions.
@@ -75,18 +82,18 @@ emotions or themes; those are inferred by the analysis layer.
 
 ```text
 Frontend React/Vite
-  -> archive query form
+  -> threshold conversation
   -> door transition
-  -> /api/pipeline/generate
-  -> result visualization and MIDI download
+  -> /api/v1/conversation/start
+  -> /api/v1/conversation/message
+  -> character label, atmosphere, historical context, and audio state
 
 Backend FastAPI
-  -> historical archive selection
-  -> AI/fallback event analysis
-  -> theme similarity mapping
-  -> embedding/reduction map
-  -> deterministic MIDI generation
-  -> /output/*.mid file serving
+  -> Groq emotional analysis
+  -> adaptive character routing
+  -> Groq character response
+  -> Gemini music, visual, and historical context generation
+  -> /output static file serving
 ```
 
 ## Environment
@@ -126,26 +133,20 @@ Open:
 http://localhost:5173
 ```
 
-## API Endpoint
+## API Endpoints
 
-The frontend uses:
+The current conversation frontend uses:
 
 ```text
-POST /api/pipeline/generate
+POST /api/v1/conversation/start
+POST /api/v1/conversation/message
+GET  /api/v1/conversation/session/{session_id}
+GET  /api/v1/health
 ```
 
-Archive mode fields:
-
-- `use_archive=true`
-- `knock=true|false`
-- `start_year`
-- `end_year`
-- `region`
-- `threshold`
-- `mood`
-
-The response includes events, embedding points, generated melody notes, metadata, all mood
-variants, interpretation text, and a downloadable `midiUrl`.
+`/conversation/start` opens an adaptive session with Bob Dylan as the first threshold voice.
+`/conversation/message` returns the routed character, character response, emotion analysis,
+music parameters, visual parameters, historical note, and turn count.
 
 ## Screenshots
 

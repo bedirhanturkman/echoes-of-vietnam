@@ -19,7 +19,15 @@ class Settings(BaseSettings):
     # Historical Context
     HISTORICAL_PERIOD: int = 1973
 
-    model_config = {"env_file": ".env", "env_file_encoding": "utf-8"}
+    # Feature Flags
+    USE_MOCK_EMBEDDINGS: bool = False
+
+    # Musical Defaults
+    DEFAULT_SCALE: str = "C_major_pentatonic"
+    DEFAULT_TEMPO: int = 72
+    DEFAULT_PROGRESSION: str = "knockin_verse"
+
+    model_config = {"env_file": ".env", "env_file_encoding": "utf-8", "extra": "ignore"}
 
 
 settings = Settings()

@@ -54,6 +54,18 @@ const PALETTES = {
     cloudColor: 'rgba(150, 110, 80, ',
     accent: '#d4a373',
   },
+  cold_violet: {
+    sky1: '#060817',
+    sky2: '#171a3f',
+    cloudColor: 'rgba(110, 120, 210, ',
+    accent: '#a7b7ff',
+  },
+  threshold_gold: {
+    sky1: '#010101',
+    sky2: '#080704',
+    cloudColor: 'rgba(210, 185, 110, ',
+    accent: '#f0d98a',
+  },
 };
 
 export default function AtmosphereCanvas({ visualParams }) {
