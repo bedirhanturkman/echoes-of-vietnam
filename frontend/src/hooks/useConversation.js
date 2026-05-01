@@ -37,6 +37,15 @@ const DEFAULT_CHARACTER = {
   initials: 'BD',
 };
 
+const CHARACTER_NAMES = {
+  auto: 'Auto / Echo chooses',
+  bob_dylan_1973: 'Bob Dylan 1973',
+  frontline_soldier: 'Frontline Soldier',
+  waiting_mother: 'Waiting Mother',
+  future_self: 'Future Self',
+  the_door: 'The Door',
+};
+
 export function useConversation() {
   const [phase, setPhase] = useState('intro'); // intro | loading | conversation
   const [sessionId, setSessionId] = useState(null);
@@ -49,6 +58,7 @@ export function useConversation() {
   const [turnCount, setTurnCount] = useState(0);
   const [lastEmotion, setLastEmotion] = useState(null);
   const [currentCharacter, setCurrentCharacter] = useState(DEFAULT_CHARACTER);
+  const [selectedCharacter, setSelectedCharacter] = useState('auto');
 
   /**
    * Initialize session — user knocked on the door.
@@ -107,7 +117,7 @@ export function useConversation() {
 
       try {
         const previousCharacterId = currentCharacter.id;
-        const data = await api.sendMessage(sessionId, userText);
+        const data = await api.sendMessage(sessionId, userText, selectedCharacter);
         const characterInfo = {
           id: data.character_id,
           name: data.character_name,
@@ -133,7 +143,11 @@ export function useConversation() {
         };
         setMessages((prev) => {
           const next = [...prev];
-          if (data.turn_count > 1 && data.character_id !== previousCharacterId) {
+          if (
+            selectedCharacter === 'auto'
+            && data.turn_count > 1
+            && data.character_id !== previousCharacterId
+          ) {
             next.push({
               id: `transition-${Date.now()}`,
               role: 'transition',
@@ -150,8 +164,34 @@ export function useConversation() {
         setIsTyping(false);
       }
     },
-    [sessionId, isTyping, currentCharacter.id]
+    [sessionId, isTyping, currentCharacter.id, selectedCharacter]
   );
+
+  const chooseCharacter = useCallback((nextCharacter) => {
+    setSelectedCharacter((previous) => {
+      if (previous === nextCharacter) return previous;
+
+      if (phase === 'conversation') {
+        const content = nextCharacter === 'auto'
+          ? 'The threshold chooses again.'
+          : previous !== 'auto'
+            ? 'A different voice steps through the threshold.'
+            : `${CHARACTER_NAMES[nextCharacter] || 'A voice'} steps through the threshold.`;
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `mode-${Date.now()}`,
+            role: 'transition',
+            content,
+            timestamp: Date.now(),
+          },
+        ]);
+      }
+
+      return nextCharacter;
+    });
+  }, [phase]);
 
   /**
    * Reset everything — walk away from the door.
@@ -168,6 +208,7 @@ export function useConversation() {
     setTurnCount(0);
     setLastEmotion(null);
     setCurrentCharacter(DEFAULT_CHARACTER);
+    setSelectedCharacter('auto');
   }, []);
 
   return {
@@ -182,6 +223,8 @@ export function useConversation() {
     turnCount,
     lastEmotion,
     currentCharacter,
+    selectedCharacter,
+    chooseCharacter,
     startSession,
     sendMessage,
     resetSession,

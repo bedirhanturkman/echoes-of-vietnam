@@ -53,6 +53,7 @@ class StartSessionRequest(BaseModel):
 class MessageRequest(BaseModel):
     session_id: str
     message: str = Field(..., min_length=1, max_length=2000)
+    selected_character: Optional[str] = None
 
 
 class EmotionAnalysis(BaseModel):

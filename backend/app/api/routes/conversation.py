@@ -52,6 +52,7 @@ async def send_message(
         return await manager.process_message(
             session_id=request.session_id,
             user_message=request.message,
+            selected_character=request.selected_character,
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -72,6 +73,8 @@ async def get_session(
         "session_id": session_id,
         "current_character": session["current_character"],
         "character_history": session["character_history"],
+        "routing_mode": session["routing_mode"],
+        "selected_character": session["selected_character"],
         "turn_count": session["turn_count"],
         "created_at": session["created_at"],
         "last_emotion": session["last_emotion"],

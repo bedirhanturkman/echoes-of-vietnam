@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime
 
 from app.models.schemas import EmotionAnalysis, StartSessionResponse, ThresholdResponse
-from app.services.character_router import get_character_name, select_character
+from app.services.character_router import CHARACTERS, get_character_name, select_character
 from app.services.gemini_context_service import GeminiContextService
 from app.services.groq_emotion_service import GroqEmotionService
 
@@ -39,6 +39,8 @@ class EmotionManager:
         _sessions[session_id] = {
             "current_character": "bob_dylan_1973",
             "character_history": ["bob_dylan_1973"],
+            "routing_mode": "auto",
+            "selected_character": None,
             "history": [],
             "turn_count": 0,
             "created_at": datetime.utcnow().isoformat(),
@@ -64,7 +66,12 @@ class EmotionManager:
             initial_music=music,
         )
 
-    async def process_message(self, session_id: str, user_message: str) -> ThresholdResponse:
+    async def process_message(
+        self,
+        session_id: str,
+        user_message: str,
+        selected_character: str | None = None,
+    ) -> ThresholdResponse:
         """
         Full pipeline for one conversation turn:
         1. Groq extracts emotion and theme.
@@ -85,14 +92,20 @@ class EmotionManager:
             conversation_history=history,
         )
 
-        character = select_character(
-            sentiment=emotion.sentiment,
-            intensity=emotion.intensity,
-            theme_match=emotion.theme_match,
-            message=user_message,
-            history=history,
-            turn_count=previous_turn_count,
-        )
+        manual_character = _normalize_selected_character(selected_character)
+        if manual_character:
+            character = manual_character
+            routing_mode = "manual"
+        else:
+            character = select_character(
+                sentiment=emotion.sentiment,
+                intensity=emotion.intensity,
+                theme_match=emotion.theme_match,
+                message=user_message,
+                history=history,
+                turn_count=previous_turn_count,
+            )
+            routing_mode = "auto"
 
         character_response = await self.groq.generate_character_response(
             user_message=user_message,
@@ -122,6 +135,8 @@ class EmotionManager:
         session["turn_count"] = turn
         session["last_emotion"] = emotion.sentiment
         session["current_character"] = character
+        session["routing_mode"] = routing_mode
+        session["selected_character"] = manual_character
         session["character_history"].append(character)
 
         if len(history) > 20:
@@ -140,3 +155,15 @@ class EmotionManager:
             historical_note=historical_note,
             turn_count=turn,
         )
+
+
+def _normalize_selected_character(selected_character: str | None) -> str | None:
+    if not selected_character:
+        return None
+
+    value = selected_character.strip()
+    if value == "auto":
+        return None
+    if value in CHARACTERS:
+        return value
+    return None
