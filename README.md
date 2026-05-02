@@ -85,21 +85,73 @@ emotions or themes; those are inferred by the analysis layer.
 
 ## Technical Architecture
 
-```text
-Frontend React/Vite
-  -> threshold conversation
-  -> door transition
-  -> /api/v1/conversation/start
-  -> /api/v1/conversation/message
-  -> character label, atmosphere, historical context, and audio state
-
-Backend FastAPI
-  -> Groq emotional analysis
-  -> adaptive character routing
-  -> Groq character response
-  -> Gemini music, visual, and historical context generation
-  -> /output static file serving
 ```
+┌─────────────────────────────────────────────────────────┐
+│                     FRONTEND (React/Vite)               │
+│                                                         │
+│  ConversationPanel ──► useConversation hook             │
+│       │                      │                          │
+│  AudioEngine (Tone.js)   AtmosphereCanvas               │
+│  real-time synthesis     door / color / particles       │
+└──────────────────────┬──────────────────────────────────┘
+                       │ HTTP (REST)
+          ┌────────────▼────────────────────┐
+          │       BACKEND (FastAPI)         │
+          │                                 │
+          │  POST /conversation/start       │
+          │  POST /conversation/message     │
+          │                                 │
+          │  ┌─────────────────────────┐    │
+          │  │    EmotionManager       │    │
+          │  │  (session orchestrator) │    │
+          │  └────────┬────────────────┘    │
+          │           │                     │
+          │   ┌───────▼────────┐            │
+          │   │ Groq Service   │ ① NLP      │
+          │   │ emotion        │ sentiment  │
+          │   │ analysis       │ intensity  │
+          │   │ (llama-3.3-70b)│ theme      │
+          │   └───────┬────────┘            │
+          │           │                     │
+          │   ┌───────▼────────┐            │
+          │   │ Character      │ ② Adaptive │
+          │   │ Router         │ scoring:   │
+          │   │                │ keyword +  │
+          │   │ bob_dylan_1973 │ sentiment  │
+          │   │ frontline_     │ + theme +  │
+          │   │  soldier       │ intensity  │
+          │   │ waiting_mother │ + arc      │
+          │   │ future_self    │            │
+          │   │ the_door       │            │
+          │   └───────┬────────┘            │
+          │           │                     │
+          │   ┌───────▼────────┐            │
+          │   │ Groq Service   │ ③ LLM      │
+          │   │ character      │ character  │
+          │   │ response gen.  │ voice with │
+          │   │ (llama-3.3-70b)│ emotional  │
+          │   │                │ directive  │
+          │   └───────┬────────┘            │
+          │           │                     │
+          │   ┌───────▼────────┐            │
+          │   │ Gemini Service │ ④ Music /  │
+          │   │ atmosphere     │ visual /   │
+          │   │ generation     │ historical │
+          │   │ (gemini-2.0-   │ parameter  │
+          │   │  flash)        │ generation │
+          │   └────────────────┘            │
+          └─────────────────────────────────┘
+```
+
+**AI Pipeline (per message turn):**
+
+| Step | Service | Technique | Output |
+|------|---------|-----------|--------|
+| ① | Groq `llama-3.3-70b` | NLP sentiment analysis | `sentiment`, `intensity`, `theme_match` |
+| ② | Character Router | Rule-based + scoring algorithm | Selected character voice |
+| ③ | Groq `llama-3.3-70b` | LLM generation with emotional directive | Character response text |
+| ④ | Gemini `gemini-2.0-flash` | Generative parameter synthesis | `MusicParams`, `VisualParams`, `HistoricalNote` |
+| ⑤ | Tone.js (frontend) | Real-time generative audio synthesis | Live music responding to emotion |
 
 ## Environment
 
@@ -155,10 +207,4 @@ music parameters, visual parameters, historical note, and turn count.
 
 ## Screenshots
 
-Add screenshots here before final submission:
-
-- Intro and archive query
-- Door transition
-- Result map and timeline
-- Generated note sequence
-- MIDI download panel
+*(Add before final submission: intro screen, door transition, conversation panel, audio engine active state)*

@@ -19,24 +19,40 @@ const CHORD_PROGRESSIONS = {
 
 const MOTIFS = {
   melancholy: ['G2', 'B2', 'D3', 'G3', 'F2', 'A2', 'C3', 'F3'],
-  hope: ['G5', 'A5', 'B5', 'D6', 'G6', 'D6', 'B5', 'G5'],
+  hope:       ['G5', 'A5', 'B5', 'D6', 'G6', 'D6', 'B5', 'G5'],
   resistance: ['E4', 'E4', 'G4', 'A4', 'B4', 'B4', 'A4', 'G4'],
-  neutral: ['G4', 'B4', 'D5', 'G5', 'D5', 'B4', 'G4', 'C5'],
-  nostalgia: ['C4', 'E4', 'G4', 'B4', 'A4', 'G4', 'E4', 'D4'], // Warm
-  rage: ['D4', 'D#4', 'D4', 'F4', 'E4', 'G4', 'F#4', 'A4'],    // Aggressive
-  peace: ['G5', 'D6', 'B5', 'G6', 'D6', 'B5', 'G5', 'C6'],     // High & Calm
-  anxiety: ['E3', 'Bb3', 'E4', 'Bb4', 'E3', 'Bb3', 'F3', 'B3'], // Dissonant
+  neutral:    ['G4', 'B4', 'D5', 'G5', 'D5', 'B4', 'G4', 'C5'],
+  nostalgia:  ['C4', 'E4', 'G4', 'B4', 'A4', 'G4', 'E4', 'D4'],
+  rage:       ['D4', 'D#4', 'D4', 'F4', 'E4', 'G4', 'F#4', 'A4'],
+  peace:      ['G5', 'D6', 'B5', 'G6', 'D6', 'B5', 'G5', 'C6'],
+  anxiety:    ['E3', 'Bb3', 'E4', 'Bb4', 'E3', 'Bb3', 'F3', 'B3'],
+  fear:       ['C3', 'C3', 'Bb2', 'Ab2', 'G2', 'Ab2', 'C3', 'Eb3'],
+  guilt:      ['A2', 'C3', 'E3', 'A3', 'G3', 'E3', 'C3', 'B2'],
+  grief:      ['F2', 'Ab2', 'C3', 'Eb3', 'Db3', 'Bb2', 'Ab2', 'F2'],
+  tenderness: ['C5', 'E5', 'G5', 'B5', 'A5', 'G5', 'E5', 'D5'],
+  longing:    ['G3', 'B3', 'D4', 'F#4', 'E4', 'D4', 'B3', 'A3'],
+  violence:   ['B3', 'B3', 'C4', 'B3', 'G3', 'F#3', 'E3', 'D3'],
+  silence:    ['G4', 'G4', 'G4', 'F4', 'E4', 'E4', 'D4', 'D4'],
+  confusion:  ['G4', 'Bb4', 'A4', 'C5', 'B4', 'G4', 'Ab4', 'F4'],
 };
 
 const PROGRESSIONS = {
-  neutral: ['G', 'D', 'Am', 'C'],
+  neutral:    ['G', 'D', 'Am', 'C'],
   melancholy: ['Am', 'Em', 'F', 'C'],
-  hope: ['G', 'C', 'D', 'G'],
+  hope:       ['G', 'C', 'D', 'G'],
   resistance: ['Em', 'B7', 'C', 'Am'],
-  nostalgia: ['C', 'F', 'G', 'C'],
-  rage: ['Dm', 'E', 'F', 'E'],
-  peace: ['G', 'C', 'G', 'D'],
-  anxiety: ['Em', 'B7', 'Em', 'B7'],
+  nostalgia:  ['C', 'F', 'G', 'C'],
+  rage:       ['Dm', 'E', 'F', 'E'],
+  peace:      ['G', 'C', 'G', 'D'],
+  anxiety:    ['Em', 'B7', 'Em', 'B7'],
+  fear:       ['Am', 'Dm', 'Am', 'E'],
+  guilt:      ['Am', 'F', 'C', 'E'],
+  grief:      ['Dm', 'Am', 'F', 'C'],
+  tenderness: ['C', 'G', 'Am', 'F'],
+  longing:    ['G', 'Em', 'C', 'D'],
+  violence:   ['Dm', 'E', 'Dm', 'E'],
+  silence:    ['G', 'D', 'G', 'D'],
+  confusion:  ['Am', 'F', 'Dm', 'B7'],
 };
 
 export default function AudioEngine({ musicParams }) {
@@ -138,17 +154,42 @@ export default function AudioEngine({ musicParams }) {
     const Tone = window.Tone;
     const p = musicParams;
     const l = layersRef.current;
-    const progType = p.chord_progression_type;
+    const t = p.chord_progression_type;
 
-    Tone.Transport.bpm.rampTo(p.tempo_bpm, 1);
-    
-    const cutoff = (progType === 'melancholy' || progType === 'nostalgia') ? 500 : (progType === 'hope' || progType === 'peace') ? 6000 : 2500;
-    l.filter.frequency.rampTo(cutoff, 1.5);
-    l.distortion.distortion = (progType === 'resistance' || progType === 'rage') ? 0.5 : 0;
-    l.reverb.wet.rampTo((progType === 'peace' || progType === 'melancholy') ? 0.7 : 0.2, 2);
-    
-    l.piano.volume.rampTo(p.instrument_layer === 'piano' ? -5 : -60, 1);
-    l.harm.volume.rampTo(p.instrument_layer === 'harmonika' ? -5 : -60, 1);
+    // Use cross_fade_seconds from params as the ramp duration, clamped shorter for sharpness
+    const ramp = Math.min(p.cross_fade_seconds ?? 1.5, 0.6);
+
+    Tone.Transport.bpm.rampTo(p.tempo_bpm, ramp);
+
+    // Per-emotion filter cutoff — wide spread for distinct tonal color
+    const CUTOFF = {
+      melancholy: 400,  grief: 350,    guilt: 450,
+      nostalgia:  600,  longing: 700,  tenderness: 2000,
+      neutral:    2500, silence: 1200, confusion: 1800,
+      hope:       5000, peace: 7000,
+      anxiety:    3500, fear: 2800,
+      resistance: 4000, rage: 4500,    violence: 5000,
+    };
+    l.filter.frequency.rampTo(CUTOFF[t] ?? 2500, ramp);
+
+    // Distortion — aggressive only for violent/rage/resistance
+    const DISTORTION = {
+      rage: 0.6, violence: 0.55, resistance: 0.4, fear: 0.2, anxiety: 0.15,
+    };
+    l.distortion.distortion = DISTORTION[t] ?? 0;
+
+    // Reverb — heavy for introspective, dry for raw/violent
+    const REVERB = {
+      peace: 0.85, melancholy: 0.8, grief: 0.75, silence: 0.9,
+      tenderness: 0.6, nostalgia: 0.65, longing: 0.7, guilt: 0.7,
+      neutral: 0.4, confusion: 0.5,
+      hope: 0.35, resistance: 0.25, anxiety: 0.3, fear: 0.3,
+      rage: 0.15, violence: 0.1,
+    };
+    l.reverb.wet.rampTo(REVERB[t] ?? 0.35, ramp);
+
+    l.piano.volume.rampTo(p.instrument_layer === 'piano' ? -5 : -60, ramp);
+    l.harm.volume.rampTo(p.instrument_layer === 'harmonika' ? -5 : -60, ramp);
   }, [musicParams, isReady]);
 
   return (

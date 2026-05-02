@@ -147,6 +147,22 @@ SOLDIER_SENTIMENTS = {"rage", "anxiety", "fear", "guilt", "violence", "resistanc
 DOOR_SENTIMENTS = {"silence", "neutral", "confusion"}
 FUTURE_THEMES = {"mortality", "meaning", "identity", "threshold", "regret", "transcendence"}
 
+# Which character each theme most belongs to, and its score bonus
+_THEME_CHARACTER_SCORES: dict[str, tuple[str, int]] = {
+    "mortality":     ("frontline_soldier", 6),
+    "farewell":      ("waiting_mother",    6),
+    "resistance":    ("frontline_soldier", 5),
+    "longing":       ("waiting_mother",    6),
+    "transcendence": ("the_door",          6),
+    "meaning":       ("future_self",       6),
+    "identity":      ("future_self",       7),
+    "threshold":     ("the_door",          7),
+    "regret":        ("future_self",       6),
+}
+
+# Bob Dylan gets a cultural co-bonus on certain themes
+_DYLAN_THEME_BONUS = {"farewell", "resistance", "transcendence", "longing"}
+
 
 def select_character(
     sentiment: str,
@@ -162,7 +178,7 @@ def select_character(
 
     text = message.lower()
     recent = _recent_character_ids(history)
-    scores = {
+    scores: dict[str, float] = {
         "bob_dylan_1973": 0,
         "frontline_soldier": 0,
         "waiting_mother": 0,
@@ -170,36 +186,55 @@ def select_character(
         "the_door": 0,
     }
 
+    # ── Keyword hits ──────────────────────────────────────────────
     if _contains_any(text, MUSIC_TERMS):
-        scores["bob_dylan_1973"] += 7
-    if sentiment in WAITING_MOTHER_SENTIMENTS:
-        scores["waiting_mother"] += 4
-    if sentiment in SOLDIER_SENTIMENTS:
-        scores["frontline_soldier"] += 4
-    if sentiment in DOOR_SENTIMENTS:
-        scores["the_door"] += 3
-    if theme_match in FUTURE_THEMES:
-        scores["future_self"] += 4
-
+        scores["bob_dylan_1973"] += 8
     if _contains_any(text, SOLDIER_TERMS):
-        scores["frontline_soldier"] += 4
+        scores["frontline_soldier"] += 6
     if _contains_any(text, MOTHER_TERMS):
-        scores["waiting_mother"] += 4
+        scores["waiting_mother"] += 6
     if _contains_any(text, FUTURE_SELF_TERMS):
-        scores["future_self"] += 4
+        scores["future_self"] += 6
     if _contains_any(text, DOOR_TERMS):
-        scores["the_door"] += 4
+        scores["the_door"] += 6
 
-    if intensity < 0.25 and turn_count > 2:
+    # ── Sentiment class ───────────────────────────────────────────
+    if sentiment in WAITING_MOTHER_SENTIMENTS:
+        scores["waiting_mother"] += 6
+    if sentiment in SOLDIER_SENTIMENTS:
+        scores["frontline_soldier"] += 6
+    if sentiment in DOOR_SENTIMENTS:
         scores["the_door"] += 5
 
-    if theme_match in {"farewell", "resistance"}:
-        scores["bob_dylan_1973"] += 2
-    if theme_match == "longing":
-        scores["waiting_mother"] += 2
+    # ── Theme → character mapping (primary) ──────────────────────
+    if theme_match in _THEME_CHARACTER_SCORES:
+        char, bonus = _THEME_CHARACTER_SCORES[theme_match]
+        scores[char] += bonus
+    if theme_match in _DYLAN_THEME_BONUS:
+        scores["bob_dylan_1973"] += 3
 
-    if _same_character_streak(recent, 3):
-        scores[recent[-1]] -= 5
+    # ── Intensity modulation ──────────────────────────────────────
+    # High intensity pulls toward raw/visceral voices
+    if intensity >= 0.75:
+        scores["frontline_soldier"] += 4
+        scores["the_door"] -= 2
+    elif intensity >= 0.50:
+        scores["waiting_mother"] += 2
+        scores["bob_dylan_1973"] += 2
+    elif intensity < 0.25:
+        scores["the_door"] += 5 if turn_count > 2 else 2
+        scores["future_self"] += 2
+
+    # ── Conversation arc nudges ───────────────────────────────────
+    # Early turns: Dylan holds the floor; later turns open other voices
+    if turn_count <= 2:
+        scores["bob_dylan_1973"] += 3
+    elif turn_count >= 8:
+        scores["future_self"] += 2  # Arc bends toward reflection
+
+    # ── Streak prevention (2 consecutive = penalty) ───────────────
+    if _same_character_streak(recent, 2):
+        scores[recent[-1]] -= 8
 
     if not any(scores.values()):
         return recent[-1] if recent else "bob_dylan_1973"

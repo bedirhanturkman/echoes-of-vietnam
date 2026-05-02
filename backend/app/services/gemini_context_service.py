@@ -36,7 +36,12 @@ VISUAL DNA:
 - Clouds: heavy/dense (grief) → dispersing (hope) → swirling fast (resistance)
 - Door: closed (defensive) → ajar (opening) → open (surrender/acceptance)
 
-IMPORTANT: Be dramatic. If a user is sad, make the transition heavy. If they are hopeful, make it bright. Do not stay in the middle.
+CRITICAL RULES:
+- Be DRAMATIC. Do not stay in the middle. A grief response must sound like grief, not mild sadness.
+- Let intensity drive the values: intensity 0.9 means maximum contrast — lowest tempo for sorrow, highest for rage.
+- tempo_bpm spread matters: grief/peace should be 50-65 BPM; rage/violence should be 110-120 BPM. Never cluster these together.
+- reverb_intensity and distortion must OPPOSE each other: grief has high reverb + no distortion; violence has no reverb + high distortion.
+- cross_fade_seconds: violent/raw emotions transition fast (0.4-0.7s); introspective emotions transition slow (1.0-2.0s).
 
 You MUST respond ONLY with a valid JSON object. No markdown, no explanation. Exactly this structure:
 {
@@ -165,14 +170,102 @@ SENTIMENT_FALLBACKS = {
 }
 
 SENTIMENT_FALLBACKS.update({
-    "fear": SENTIMENT_FALLBACKS["anxiety"],
-    "guilt": SENTIMENT_FALLBACKS["melancholy"],
-    "violence": SENTIMENT_FALLBACKS["rage"],
-    "longing": SENTIMENT_FALLBACKS["nostalgia"],
-    "grief": SENTIMENT_FALLBACKS["melancholy"],
-    "tenderness": SENTIMENT_FALLBACKS["peace"],
-    "silence": SENTIMENT_FALLBACKS["neutral"],
-    "confusion": SENTIMENT_FALLBACKS["neutral"],
+    "fear": {
+        "music_params": MusicParams(
+            tempo_bpm=88, key="Am", instrument_layer="piano", rhythm_type="syncopated",
+            chord_progression_type="fear",
+            reverb_intensity=0.5, historical_soundscape="radio_static",
+            cross_fade_seconds=0.6
+        ),
+        "visual_params": VisualParams(
+            color_palette="cold_violet", cloud_density=0.85,
+            door_state="closed", particle_intensity=0.75
+        ),
+    },
+    "guilt": {
+        "music_params": MusicParams(
+            tempo_bpm=63, key="Am", instrument_layer="piano", rhythm_type="steady",
+            chord_progression_type="guilt",
+            reverb_intensity=0.75, historical_soundscape="radio_static",
+            cross_fade_seconds=0.8
+        ),
+        "visual_params": VisualParams(
+            color_palette="blue_grey", cloud_density=0.65,
+            door_state="ajar", particle_intensity=0.2
+        ),
+    },
+    "grief": {
+        "music_params": MusicParams(
+            tempo_bpm=52, key="Dm", instrument_layer="piano", rhythm_type="steady",
+            chord_progression_type="grief",
+            reverb_intensity=0.85, historical_soundscape="silence",
+            cross_fade_seconds=0.8
+        ),
+        "visual_params": VisualParams(
+            color_palette="blue_grey", cloud_density=0.9,
+            door_state="closed", particle_intensity=0.15
+        ),
+    },
+    "violence": {
+        "music_params": MusicParams(
+            tempo_bpm=118, key="Dm", instrument_layer="harmonika", rhythm_type="syncopated",
+            chord_progression_type="violence",
+            reverb_intensity=0.1, historical_soundscape="crowd_protest",
+            cross_fade_seconds=0.4
+        ),
+        "visual_params": VisualParams(
+            color_palette="deep_red", cloud_density=1.0,
+            door_state="closed", particle_intensity=1.0
+        ),
+    },
+    "longing": {
+        "music_params": MusicParams(
+            tempo_bpm=73, key="G", instrument_layer="harmonika", rhythm_type="arpeggio",
+            chord_progression_type="longing",
+            reverb_intensity=0.65, historical_soundscape="radio_static",
+            cross_fade_seconds=1.0
+        ),
+        "visual_params": VisualParams(
+            color_palette="warm_amber", cloud_density=0.45,
+            door_state="ajar", particle_intensity=0.5
+        ),
+    },
+    "tenderness": {
+        "music_params": MusicParams(
+            tempo_bpm=62, key="C", instrument_layer="piano", rhythm_type="arpeggio",
+            chord_progression_type="tenderness",
+            reverb_intensity=0.6, historical_soundscape="silence",
+            cross_fade_seconds=1.2
+        ),
+        "visual_params": VisualParams(
+            color_palette="warm_amber", cloud_density=0.15,
+            door_state="open", particle_intensity=0.35
+        ),
+    },
+    "silence": {
+        "music_params": MusicParams(
+            tempo_bpm=50, key="G", instrument_layer="ambient_only", rhythm_type="steady",
+            chord_progression_type="silence",
+            reverb_intensity=0.95, historical_soundscape="silence",
+            cross_fade_seconds=1.5
+        ),
+        "visual_params": VisualParams(
+            color_palette="ethereal_white", cloud_density=0.05,
+            door_state="open", particle_intensity=0.05
+        ),
+    },
+    "confusion": {
+        "music_params": MusicParams(
+            tempo_bpm=78, key="Am", instrument_layer="ambient_only", rhythm_type="arpeggio",
+            chord_progression_type="confusion",
+            reverb_intensity=0.55, historical_soundscape="radio_static",
+            cross_fade_seconds=0.7
+        ),
+        "visual_params": VisualParams(
+            color_palette="cold_violet", cloud_density=0.6,
+            door_state="ajar", particle_intensity=0.55
+        ),
+    },
 })
 
 

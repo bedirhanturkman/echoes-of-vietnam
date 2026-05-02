@@ -131,10 +131,7 @@ class GroqEmotionService:
     ) -> str:
         """Generate the selected character's response."""
         system_prompt = CHARACTER_PROMPTS.get(character, CHARACTER_PROMPTS["bob_dylan_1973"])
-        routing_context = (
-            f"Current emotional state: {emotion.sentiment}, intensity {emotion.intensity:.2f}, "
-            f"theme {emotion.theme_match}. Respond as the selected voice."
-        )
+        routing_context = _build_routing_context(emotion, character)
 
         messages = [
             {"role": "system", "content": system_prompt},
@@ -219,3 +216,72 @@ def _history_for_groq(history: list[dict]) -> list[dict]:
 
 def _clean_character_response(raw: str) -> str:
     return re.sub(r"```.*?```", "", raw, flags=re.DOTALL).strip()
+
+
+# ── Per-character, per-intensity behavioral directives ─────────────────────────
+_INTENSITY_DIRECTIVES: dict[str, dict[str, str]] = {
+    "bob_dylan_1973": {
+        "low":      "Distant. An observer. A songwriter hearing something from far away — a single image, not a verdict.",
+        "moderate": "A line is forming. Half-finished. Let the metaphor carry the weight, not the explanation.",
+        "high":     "The song is writing itself. Fragmented. Urgent. Like the words arrived before you did.",
+    },
+    "frontline_soldier": {
+        "low":      "Hollow. The silence after the radio dies. One sentence at most. Don't explain.",
+        "moderate": "Tension showing through. Short, clipped. Something held back — a name, an order, a smell.",
+        "high":     "Raw. Barely contained. Each word costs something physical. Do not complete every thought.",
+    },
+    "waiting_mother": {
+        "low":      "Quiet watching. She notices what's on the table, what's on the news at low volume. Restrained.",
+        "moderate": "Controlled fear. Tenderness pressed against anxiety. Don't let either win.",
+        "high":     "She is trembling but staying absolutely still. Every word chosen so she doesn't break.",
+    },
+    "future_self": {
+        "low":      "Quiet certainty. You've stood here before. No rush — the truth will land when it's ready.",
+        "moderate": "Intimate and unsettling. You know more than you're saying. Let that show.",
+        "high":     "Urgent truth. The user is running out of time to hear this. Say it directly.",
+    },
+    "the_door": {
+        "low":      "One word if you can manage it. Stillness is the answer.",
+        "moderate": "Cryptic. Two sentences, judge-like. Do not soften.",
+        "high":     "Final. Absolute. The threshold speaks once.",
+    },
+}
+
+_SENTIMENT_TONES: dict[str, str] = {
+    "rage":       "Let the anger heat the air without explaining it.",
+    "grief":      "Grief has no argument. Carry it in the pauses.",
+    "guilt":      "The guilt lives in what is NOT said. Leave gaps.",
+    "tenderness": "Tenderness is quiet. Do not dramatize it.",
+    "fear":       "Fear makes sentences short and incomplete.",
+    "longing":    "Longing reaches toward something just out of frame.",
+    "nostalgia":  "The past is warm and slightly out of focus.",
+    "anxiety":    "Anxiety is circular — it returns to the same word.",
+    "silence":    "Silence is the most honest answer here.",
+    "confusion":  "Confusion asks questions it doesn't expect answered.",
+    "hope":       "Hope is fragile. Handle it without declaring it.",
+    "peace":      "Peace doesn't announce itself. Let it be still.",
+    "resistance": "Resistance has a body. It pushes back physically.",
+    "violence":   "Violence leaves marks that don't need description.",
+    "melancholy": "Melancholy is weight, not sadness. Let it settle.",
+    "neutral":    "Stay present. Listen before speaking.",
+}
+
+
+def _build_routing_context(emotion: "EmotionAnalysis", character: str) -> str:
+    intensity = emotion.intensity
+    if intensity < 0.35:
+        level = "low"
+    elif intensity > 0.70:
+        level = "high"
+    else:
+        level = "moderate"
+
+    char_directive = _INTENSITY_DIRECTIVES.get(character, {}).get(level, "")
+    sentiment_tone = _SENTIMENT_TONES.get(emotion.sentiment, "")
+
+    return (
+        f"EMOTIONAL STATE: {emotion.sentiment} (intensity {emotion.intensity:.2f} — {level}) | theme: {emotion.theme_match}\n"
+        f"VOICE DIRECTIVE: {char_directive}\n"
+        f"TONE NOTE: {sentiment_tone}\n"
+        f"Do not name the emotion. Embody it."
+    )
