@@ -1,46 +1,74 @@
-# Echoes Through the Door: AI Memory-to-Melody Archive
+# Echoes Through the Door
 
-An interactive digital artwork that turns historical memory into deterministic MIDI composition.
-The user does not write events, emotions, or themes. They enter only a date range, a region, or
-press **Knock**. The system selects historical fragments from its archive, analyzes emotional and
-thematic meaning, maps the results into musical rules, and opens a door-shaped transition into a
-generated memory melody.
+An interactive artwork built around five historical voices from the Vietnam War era. The visitor
+crosses a symbolic threshold — the door — and converses with characters summoned by the emotional
+and thematic weight of their words. The system never asks for feelings directly; it reads them
+from the conversation and selects the voice, music, and atmosphere in response.
 
 ## Artistic Statement
 
-The project is inspired by the cultural threshold around 1973: the Vietnam War, anti-war
-counterculture, farewell, transition, mortality, and legacy. The door metaphor comes from the
-idea of a historical threshold: a point where public memory knocks, waits, and becomes sound.
-
-The current conversation mode can use adaptive character routing as part of the artwork:
-"The system can let the conversation itself summon the voice." The possible voices are Bob Dylan
-in 1973, a frontline soldier, a waiting mother, the user's future self, and the door itself.
-Groq first extracts sentiment, intensity, and theme; the router selects the voice; then Gemini
-translates the emotional state into music, visuals, and historical context.
-
-The visitor can also choose a voice manually. In Auto mode, Echo chooses from the emotional and
-thematic state of the exchange. In manual mode, the selected character answers every message until
-the visitor returns control to the threshold. Dialogue follows the chosen voice, music still
-responds to emotion and intensity, and the visual atmosphere keeps the selected character's color
-world.
+The project is rooted in the cultural threshold of 1973: the Vietnam War, anti-war counterculture,
+farewell, transition, mortality, and legacy. The door metaphor stands for the moment where memory
+knocks and waits to become sound.
 
 Rather than copying Bob Dylan's melodies, the system models broad 1970s folk harmony principles:
-simple I-IV-V progressions, acoustic phrasing, descending farewell motifs, and unresolved
+simple I–IV–V progressions, acoustic phrasing, descending farewell motifs, and unresolved
 transitions.
+
+## Characters
+
+Five voices inhabit the threshold. Each character has a fixed visual palette that colors the
+atmosphere while they speak.
+
+| ID | Name | Initials | Role | Visual Palette |
+|----|------|----------|------|----------------|
+| `bob_dylan_1973` | Bob Dylan | BD | Poetic witness, musician, cultural voice of 1973 | `sepia_glow` |
+| `frontline_soldier` | Frontline Soldier | FS | Vietnam War soldier speaking from the front | `deep_red` |
+| `waiting_mother` | Waiting Mother | WM | A mother waiting for her son to return from war | `warm_amber` |
+| `future_self` | Future Self | YF | The user's future self speaking from beyond the threshold | `cold_violet` |
+| `the_door` | The Door | DR | The symbolic threshold itself | `threshold_gold` |
+
+Bob Dylan always opens the first turn. After that, the router selects the next voice.
+
+## Conversation Routing
+
+### Auto mode (default)
+
+Each incoming message is scored against all five characters. The winning character speaks next.
+Scoring layers, applied in order:
+
+| Layer | What it checks | Max score added |
+|-------|---------------|-----------------|
+| **Keyword match** | Music/poetry terms → Dylan; war/fear/guilt → Soldier; hope/family/return → Mother; mortality/identity/future → Future Self; silence/lost/stuck → Door | +6 to +8 |
+| **Sentiment class** | Groq-extracted sentiment matched to character affinity groups | +5 to +6 |
+| **Theme → character** | Primary theme mapped to its most fitting voice (`mortality` → Soldier, `farewell` → Mother, `threshold` → Door, `identity` → Future Self, …) | +5 to +7 |
+| **Dylan theme bonus** | farewell / resistance / transcendence / longing also bump Dylan | +3 |
+| **Intensity modulation** | High intensity (≥ 0.75) pulls toward Soldier; medium (0.50–0.75) toward Mother and Dylan; low (< 0.25) toward Door and Future Self | ±2 to +5 |
+| **Arc nudge** | Turns 1–2: Dylan stays prominent. Turn 8+: Future Self gains weight as the conversation bends toward reflection | +2 to +3 |
+| **Streak penalty** | Two consecutive turns with the same character subtract 8 from that character's score | −8 |
+
+### Manual mode
+
+If the frontend sends `selected_character` in the message request, the router skips scoring and
+locks to that character until `selected_character` is cleared or set to `"auto"`. Music and
+visuals still respond to live emotion; only the voice is fixed.
+
+### Recognized sentiments and themes
+
+**Sentiments** (Groq output): `melancholy` · `resistance` · `hope` · `neutral` · `nostalgia` ·
+`rage` · `peace` · `anxiety` · `fear` · `guilt` · `violence` · `longing` · `grief` ·
+`tenderness` · `silence` · `confusion`
+
+**Themes** (Groq output): `mortality` · `farewell` · `resistance` · `longing` · `transcendence` ·
+`meaning` · `identity` · `threshold` · `regret`
 
 ## User Flow
 
 1. Intro screen
-2. Date / region / threshold query screen
-3. Door screen with Knock interaction
-4. Processing animation
-5. Result screen with timeline, embedding map, AI analysis cards, note visualization, silent preview, and MIDI download
-
-The default **Knock** query is:
-
-```text
-1968-1975 / Vietnam-USA / farewell
-```
+2. Conversation panel opens — Bob Dylan greets the visitor
+3. Visitor types; Groq extracts emotion and theme; router selects next voice
+4. Character responds; Tone.js plays live music; AtmosphereCanvas updates color and particles
+5. Visitor can lock a character manually or return to Auto at any time
 
 ## Dataset
 
@@ -205,6 +233,18 @@ GET  /api/v1/health
 `/conversation/message` returns the routed character, character response, emotion analysis,
 music parameters, visual parameters, historical note, and turn count.
 
+## Team
+
+| Name | Student ID |
+|------|------------|
+| İsa Ölmez | 20220808032 |
+| Bedirhan Türkman | 20210808025 |
+| Murat Bora Çakmak | 20220808604 |
+
 ## Screenshots
 
-*(Add before final submission: intro screen, door transition, conversation panel, audio engine active state)*
+![Main Page](docs/main-page.PNG)
+
+![Conversation Panel](docs/conversation.PNG)
+
+![Conversation — Character Switch](docs/conversation-2.PNG)
